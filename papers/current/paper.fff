@@ -1,0 +1,57 @@
+\begin{figure*}[hbt]
+\ifnextchar[{\eatarg}{}
+[htbp]
+\centering
+\includegraphics{paper_files/figure-latex/past-1.pdf}
+\caption{\label{fig:past}Three flanker paradigms. The participants' task is
+to identify the center letter as either an A or an H. \textbf{A.}
+Conventional Eriksen \& Eriksen (1974) flanker paradigm results in
+assimilation. \textbf{B.} Modified paradigm with morph-letter targets
+results in contrast (Rouder \& King, 2003). \textbf{C.} Word contexts
+result in assimilation (Neisser, 1967).}
+\end{figure*}
+\efloatseparator
+ 
+\begin{figure*}[hbt]
+\ifnextchar[{\eatarg}{}
+[htbp]
+\centering
+\includegraphics{paper_files/figure-latex/stimulus-1.pdf}
+\caption{\label{fig:stimulus}Stimuli. \textbf{Top} Five targets.
+\textbf{Bottom} Four contexts. The stimulus on a trial consisted of one
+of the four targets placed into the bank center location of the
+background context.}
+\end{figure*}
+\efloatseparator
+ 
+\begin{figure*}[hbt]
+\ifnextchar[{\eatarg}{}
+[htbp]
+\centering
+\includegraphics{paper_files/figure-latex/avcfigures-1.pdf}
+\caption{\label{fig:avcfigures}Empirical Results. \textbf{A.} Response
+proportions for all four contexts. Solid and dashed lines indicate
+letter and word contexts, respectively. Filled and open points indicate
+A-promoting and H-promoting contexts, respectively. \textbf{B.}
+Individual effects in the letter contexts. The negative direction
+denotes a robust contrast effect. \textbf{C.} Individual effects in the
+word contexts. The positive direction denotes a robust assimilation
+effect.}
+\end{figure*}
+\efloatseparator
+ 
+\begin{figure*}[hbt]
+\ifnextchar[{\eatarg}{}
+[htbp]
+\centering
+\includegraphics{paper_files/figure-latex/modelfiguresminus-1.pdf}
+\caption{\label{fig:modelfiguresminus}Model Results. \textbf{A.} Each
+participant's estimated assimilation effect against their estimated
+contrast effect. An ellipse denotes the standard deviations of the
+estimate and the blue regression line is the line of best fit.
+\textbf{B.} The posterior distribution of the population correlation,
+\(\rho\), between assimilation and contrast. The solid line denotes the
+prior distribution.}
+\end{figure*}
+\efloatseparator
+ 

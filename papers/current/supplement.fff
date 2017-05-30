@@ -1,0 +1,36 @@
+\begin{figure*}[hbt]
+\ifnextchar[{\eatarg}{}
+[htbp]
+\centering
+\includegraphics{supplement_files/figure-latex/newfigures-1.pdf}
+\caption{\label{fig:newfigures}The posterior distribution, in red, compared
+to the prior distribution of the correlation between individuals'
+assimilation and contrast based on our measurement model. The curved
+line denotes the prior distribution of the correlation.}
+\end{figure*}
+\efloatseparator
+ 
+\begin{figure*}[hbt]
+\ifnextchar[{\eatarg}{}
+[htbp]
+\centering
+\includegraphics{supplement_files/figure-latex/modelfigures-1.pdf}
+\caption{\label{fig:modelfigures}The posterior distribution of the
+correlation between assimilation and contrast based on the joint
+specification measurement model. The horizontal line signifies the prior
+distribution.}
+\end{figure*}
+\efloatseparator
+ 
+\begin{figure*}[hbt]
+\ifnextchar[{\eatarg}{}
+[htbp]
+\centering
+\includegraphics{supplement_files/figure-latex/rhofigures-1.pdf}
+\caption{\label{fig:rhofigures}The posterior distribution of the correlation
+between assimilation and contrast, represented by rho, based on our
+measurement model. The horizontal line signifies the prior
+distribution.}
+\end{figure*}
+\efloatseparator
+ 

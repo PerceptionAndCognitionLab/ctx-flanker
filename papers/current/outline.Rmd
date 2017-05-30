@@ -1,0 +1,110 @@
+---
+title: "A Bayesian Anlaysis of Flanker Effects on Perception"
+author: "Hope Snyder, Sean Rafferty, Julia Haaf, Jeff Rouder"
+date: \today
+header-includes:
+  - \usepackage{amsmath, amssymb,amsthm,amsfonts}
+  - \usepackage{multicol}
+  - \usepackage[usenames,dvipsnames]{pstricks}
+  - \usepackage{graphicx}
+output: 
+  pdf_document:
+    toc: false
+---
+
+  (Just following along with my talk for right now.  It's how it makes sense in my head for right now as a "story".)
+  
+  
+# Pupose
+  Relationship between assimilation and contrast
+  
+  Individuals ability to ignore distracting information
+  
+# Introduction
+
+## Eriksen & Eriksen (1974)
+  Flanker effect description
+  
+  How it can be interpreted as assimilation
+  
+## Rouder & King (2003)
+  Changes from E&E
+  
+  Negative flanker effect description
+  
+  Contrast effects in the morphed letters
+  
+## Other Supportive Articles (COMING SOON)
+  Palmer, Neisser, McClollund & Rumelhardt
+  
+# Experiment 1: Replication Study
+
+## Goals
+  Replicate Rouder & King's previous results
+  
+  Find assimilation as well in the pure letters
+
+## Methods
+  Stimulus description
+  
+  Display details
+  
+  Reasons for more pure letters than morphed
+
+## Results
+  Graphs: average, individual effects
+  
+  Descriptive statistics
+  
+## Discussion
+  Found contrast effect, shown in graphs
+  
+  Assimilation was not as prominent
+  
+  Lead in to Experiment 2
+
+# Experiment 2: Contrast/Assimilation Study
+
+## Goals
+  Find both contrast and assimilation
+  
+  Do they occur at the same time?
+  
+  Way to measure the relationship
+
+## Methods
+  Stimulus description
+  
+  Display details
+  
+  Reasons for more morphed letters
+
+## Results
+  Graphs: average, individual effects
+  
+  Descriptive statistics
+  
+## Discussion
+  Found contrast and assimilation effects, shown in graphs
+  
+  Relationship can be localized in relationship between individual's contrast and assimilation levels
+  
+  Lead in to Model
+
+# Bayesian Model
+
+  (I'm not sure how to go about writing this section up.  I have an example from Julia but I'm not sure what to include or change because I don't want to copy from the example.)
+  
+  Basic definitions
+  
+  Transformation and reasons
+  
+  Decompositions and definitions
+  
+  Albert & Chib (1995)
+  
+  Priors
+  
+  Two comparisons: $\alpha$, $\beta$, histogram; $\rho$, histogram
+  
+# Discussion
