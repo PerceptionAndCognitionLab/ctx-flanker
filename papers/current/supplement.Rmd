@@ -1,31 +1,33 @@
 ---
-title             : " Supplement to 'Common or Distinct Attention Mechanisms for Contrast and Assimilation?'"
+title             : "Supplement to 'Common or Distinct Attention Mechanisms for Contrast and Assimilation?'"
 shorttitle        : "Contrast and Assimilation Supplement"
 
 author: 
   - name          : "Hope K. Snyder"
     affiliation   : "1"
-    corresponding : yes    # Define only one corresponding author
-    address       : " "
+    corresponding : yes 
+    address       : "205 McAlester Hall, University of Missouri, Columbia, MO 65211"
     email         : "hks7w2@mail.missouri.edu"
-  - name          : "Sean M. Rafferty"
-    affiliation   : "1"
-  - name          : "Julia M. Haaf"
-    affiliation   : "1"
-  - name          : "Jeffery N. Rouder"
-    affiliation   : "1"
-
+  - name: "Sean M. Rafferty"
+    affiliation: '1'
+  - name: "Julia M. Haaf"
+    affiliation: '1'
+  - name: "Jeffery N. Rouder"
+    affiliation: '2,1'
+    
 affiliation:
-  - id            : "1"
-    institution   : "University of Missouri"
-
+  - id: '1'
+    institution: University of Missouri
+  - id: '2'
+    institution: University of California, Irvine
+    
 author_note: >
   This document was written in R-Markdown with code for data analysis integrated into the text.  The Markdown script is open and freely available at https://github.com/PerceptionAndCognitionLab/ctx-flanker/tree/public/papers/current.  The data were *born open* [@Rouder:2016] and are freely available at https://github.com/PerceptionCognitionLab/data1/tree/master/ctxIndDif/flankerMorph4
 
-keywords          : "Inhibition, Selective Attention, Contrast Effects, Assimilation Effects"
-wordcount         : " "
+keywords: "Inhibition, Selective Attention, Contrast Effects, Assimilation Effects"
+wordcount: ' '
 
-bibliography      : ["r-references.bib","bibfile.bib"]
+bibliography: ["r-references.bib","bibfile.bib"]
 
 figsintext        : no
 figurelist        : no
@@ -38,7 +40,6 @@ class             : "man"
 header-includes:
    - \usepackage{enumerate}
    - \usepackage{amsmath, amssymb,amsthm,amsfonts}
-   - \usepackage{bm}
    - \usepackage{multicol}
    - \usepackage[usenames,dvipsnames]{pstricks}
    - \usepackage{mathtools}

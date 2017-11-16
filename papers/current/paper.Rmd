@@ -1,34 +1,36 @@
 ---
-title             : "Common or Distinct Attention Mechanisms for Contrast and Assimilation?"
+title: "Common or Distinct Attention Mechanisms for Contrast and Assimilation?"
 shorttitle        : "Contrast and Assimilation"
 
 author: 
   - name          : "Hope K. Snyder"
     affiliation   : "1"
-    corresponding : yes    # Define only one corresponding author
+    corresponding : yes 
     address       : "205 McAlester Hall, University of Missouri, Columbia, MO 65211"
     email         : "hks7w2@mail.missouri.edu"
-  - name          : "Sean M. Rafferty"
-    affiliation   : "1"
-  - name          : "Julia M. Haaf"
-    affiliation   : "1"
-  - name          : "Jeffery N. Rouder"
-    affiliation   : "1"
-
+  - name: "Sean M. Rafferty"
+    affiliation: '1'
+  - name: "Julia M. Haaf"
+    affiliation: '1'
+  - name: "Jeffery N. Rouder"
+    affiliation: '2,1'
+    
 affiliation:
-  - id            : "1"
-    institution   : "University of Missouri"
+  - id: '1'
+    institution: University of Missouri
+  - id: '2'
+    institution: University of California, Irvine
 
 author_note: >
-  This paper was written in R-Markdown with code for data analysis integrated into the text.  The Markdown script is open and freely available at https://github.com/PerceptionAndCognitionLab/ctx-flanker/tree/public/papers/current.  The data were *born open* [@Rouder:2016] and are freely available at https://github.com/PerceptionCognitionLab/data1/tree/master/ctxIndDif/flankerMorph4
-
-abstract: >
-  The ability to inhibit distracting elements in the environment while focusing on specific targets is crucial.  In most tasks, like Stroop or priming, the to-be-ignored distractors affect the response in a certain direction that we call assimilation.  The response is more like the distractors than otherwise.  Yet, in some tasks, contrast tasks, the opposite holds.  We ask here if individuals with strong inhibition in assimilation-type tasks also have strong inhibition in contrast tasks.  Assimilation and contrast are often thought to have different underlying psychological mechanisms, and a correlational analysis serves as a test of this hypothesis vs. a more unified account of inhibition.  To answer the question of whether inhibition across contrastive and assimilative contexts is common or distinct, we assess the correlations with a hierarchical Bayesian model.  We designed tasks with common stimuli that had large assimilation or contrast effects depending only on the surrounding context.  Critically, a positive correlation was found---individuals who better inhibited a contrast-inducing contexts also better inhibited assimilation-inducing contexts.  These results indicate inhibition is seemingly common, at least in part, across contrast and assimilation tasks.
+  This document was written in R-Markdown with code for data analysis integrated into the text.  The Markdown script is open and freely available at https://github.com/PerceptionAndCognitionLab/ctx-flanker/tree/public/papers/current.  The data were *born open* [@Rouder:2016] and are freely available at https://github.com/PerceptionCognitionLab/data1/tree/master/ctxIndDif/flankerMorph4
   
-keywords          : "Inhibition, Selective Attention, Contrast Effects, Assimilation Effects"
-wordcount         : " "
+abstract: |
+  The ability to inhibit distractors while focusing on specific targets is crucial.  In most tasks, like Stroop or priming, the to-be-ignored distractors affect the response to be more like the distractors.  We call that assimilation.  Yet, in some tasks, contrast tasks, the opposite holds.  Contrast and assimilation are opposing behavioral effects, but they both occur when to-be-ignored information affects judgments.  We ask here whether inhibition across contrastive and assimilative tasks is common or distinct.  Assimilation and contrast are often thought to have different underlying psychological mechanisms, and we use a correlational analysis with hierarchical Bayesian models as a test of this hypothesis.  We designed tasks with large assimilation or contrast effects.  The stimuli are morphed letters, and whether there is contrast or assimilation depends on whether the surround is a letter field (contrast) or a word field (assimilation).  Critically, a positive correlation was found - individuals who better inhibited contrast-inducing contexts also better inhibited assimilation-inducing contexts.  These results indicate inhibition is common, at least in part, across contrast and assimilation tasks.
 
-bibliography      : ["r-references.bib","bibfile.bib"]
+keywords: "Inhibition, Selective Attention, Contrast Effects, Assimilation Effects"
+wordcount: ' '
+
+bibliography: ["r-references.bib","bibfile.bib"]
 
 figsintext        : yes
 figurelist        : no
@@ -45,22 +47,12 @@ output            : papaja::apa6_pdf
 library("papaja")
 ```
 
-The concepts of *spatial selective attention* and *response inhibition* have been topical in the psychological literature since at least @Helmholtz:1867 and @James:1890a.  The ability to inhibit some elements in the environment while focusing on other target elements is crucial to proper functioning [e.g., @Broadbent:1958;@Cowan:1995].  Failures to properly inhibit responses to inappropriate elements in the environment are used to describe and understand pathological development [@Barkley:1997;@Hasher:Zacks:1988].  Inhibition is usually treated as a fairly unified or homogenous concept.  It may be measured in tasks where the goal is to select or identify target items in the presence of to-be-ignored distractors.
+The concepts of *spatial selective attention* and *response inhibition* have been topical in the psychological literature since at least @Helmholtz:1867 and @James:1890a.  The ability to inhibit some elements in the environment while focusing on other target elements is crucial to proper functioning [e.g., @Broadbent:1958;@Cowan:1995].  Failures to properly inhibit responses to inappropriate elements in the environment are used to describe and understand pathological development [@Barkley:1997;@Hasher:Zacks:1988].  Inhibition is usually treated as a fairly unified or homogenous concept.  It may be measured in tasks where the goal is to select or identify target items in the presence of to-be-ignored distractors.  We provide a novel and, in our opinion, an exceedingly strong test of whether spatial inhibition is a unified phenomenon.
 
 In many spatial interference tasks, such as Eriksen interference [@Eriksen:Eriksen:1974], the effect is usually in a specific direction that we term *assimilation*.  Assimilation is displayed in Figure \@ref(fig:past)A where the goal is to identify the center letter as either an "A" or an "H."  People are more likely to misidentify the target *H* as an "A" when surrounded by *A*'s than surrounded by *H*'s.
-Because they are making responses seemingly driven by the identity of the flankers rather than the target, we say their inihibition failure leads to an *assimilation* of the background. 
+Because they are making responses seemingly driven by the identity of the flankers rather than the target, we say their inhibition failure leads to an *assimilation* of the background.
 
-Assimilation, however, is not the only outcome.  @Rouder:King:2003 used a modified version of the flanker task and found the opposite effects, which are called here *contrast* effects.  Rather than use well-formed letters, their targets were morphed letters between *A* and *H* (see Figure \@ref(fig:past)B).  Perhaps suprisingly, morphs surrounded by *H*'s were *less likely* to be identified as "H" than morphs surrounded by *A*'s.   This effect is exactly opposite because inhibition failures lead to a response least like the background.
-
-The main question we ask is whether spatial selective attention is mediated by common or distinct mechanisms across tasks that typically lead to the opposite patterns of contrast and assimilation.  We address this question by studying the correlation of inhibition abilities across people.  Are people who are good at ignoring the surrounding information in a standard flanker task that promote assimilation also good at ignoring the surrounding information in a modified flanker task that promotes contrast?
-
-There are some studies that support a common mechanism while there are others that support the distinct mechanisms.  Support for the common-mechanism view is as follows:  Most proposed behavioral and neural mechanisms of selective attention rely on a narrowing of receptive fields.  This narrowing process occurs  whether the to-be-excluded information is constrastive or assimilative [e.g., @Cowan:1995;@Desimone:Duncan:1995;@Eriksen:Schultz:1979;@Hedden:Gabrieli:2010].  Behavioral evidence comes from @Miyake:etal:2000 who studied individual differences.  When variability across a range of executive-function tasks is decomposed, one recovered latent factor is a unified concept of inhibition.  
-
-Yet, there are strong arguments that contrast and assimilation are not the same process.  Most theories of contrast rely on a center-surround organization of low-level, perceptual receptive field structures [@Palmer:1999]. Most theories of assimilation flanker effects, however, are failures of response inhibition, which is conceptualized as a higher-level, top down process [@Eriksen:Eriksen:1974].  Behavioral evidence for distinct processes comes from @Rouder:King:2003 whose design is a bit complicated:.  These researchers associated the letters *c* and *A* with one response, denoted $R_1$, and *e* and *H* with another, denoted $R_2$.  When well-formed letters were the target, assimilation to the response assignment of the background was observed.  For well-formed *A* letters, backgrounds of *c* resulted in higher proportion of $R_1$ response than did backgrounds of *e*.  When morphed letters were targets, the effect varied.  If morphs between *A* and *H* were sourounded by either *A* or *H*, the effect was contrastive.  Yet, if these same morphs were surorunded by *c* or *e*, the effect was assimilative.  @Rouder:King:2003 interpreted the assimilative effect to be at the response level and the constrative effect to be at a perceptual level.
-
-We take a correlational approach with better stimulus control than @Rouder:King:2003.  We sought targets and backgrounds such that whether there was contrast or assimilation was a function of the background rather than the target.  Our targets were morphed letters like those in Figure \@ref(fig:past)B.  Our backgrounds came in two types, either a letter context such as in Figure \@ref(fig:past)B or a word context such as in \@ref(fig:past)C.  For the letter context, we expect large constrast effects as was observed by @Rouder:King:2003.  The rationale for the word context comes from @Neisser:1967.  We expect that a morph between *A* and *H* will be judged more "A" like in *C_T* context than *T_E* context.  This effect is assimilative, and it has been repeatedly demonstrated that there is an assimilative effect of word contexts for both visually and orally presented letters [@Baron:Thurston:1973;@Reicher:1969].  As an aside, this assimilation effect has been a motivating phenomenon in the development of connectionist models [e.g., @Carpenter:Grossberg:1987;@Rumelhart:McClelland:1982] where word nodes feed positive activation to corresponding letter nodes.
-
-In the following experiment, each participant identified several *A*-to-*H* morphs (see the top row of Figure \@ref(fig:stimulus)).  These target morphs were embedded within four background contexts (see the bottom row of Figure \@ref(fig:stimulus)).  By comparing performance in the *A*-letter and *H*-letter contexts, we assess each participant's ability to inhibit contrastive information.  By comparing performance in the *C_T*-word and *T_E*-word contexts, we assess each participant's ability to inhibit assimilative information.  Note that for each target, there are assimilative and contrastive background contexts such that the critical comparisons may be made across backgrounds.  To asses the question of whether inhibition across contrastive and assimilative contexts is common or distinctt, we assess the correlation across individuals of their inhibition within the two context types.
+Assimilation, however, is not the only outcome.  @Rouder:King:2003 used a modified version of the flanker task and found the opposite effects, which are called here *contrast* effects.  Rather than use well-formed letters, Rouder and King's targets were morphed letters between *A* and *H* (see Figure \@ref(fig:past)B).  Perhaps surprisingly, morphs surrounded by *H*'s were *less likely* to be identified as "H" than morphs surrounded by *A*'s.   This effect is exactly opposite because inhibition failures lead to a response that is in contrast to the background.
 
 ```{r past, fig.width= 4,fig.height=3,fig.cap="Three flanker paradigms.  The participants' task is to identify the center letter as either an A or an H. **A.** Conventional Eriksen & Eriksen (1974) flanker paradigm results in assimilation.  **B.** Modified paradigm with morph-letter targets results in contrast (Rouder & King, 2003). **C.** Word contexts result in assimilation (Neisser, 1967).",cache=TRUE}
 ### general variables
@@ -166,18 +158,28 @@ mtext("vs.", line = 1, padj = 0, side = 4, las = 1)
 the((12/20))
 ```
 
+The presence of two different attention effects, assimilation and contrast, provides a fruitful window for examining the unity of inhibition.  Both contrast and assimilation here reflect a failure to completely inhibit the background, but they lead to opposite behavioral patterns.  The question then is whether the inhibition processes are the same in both tasks.    We address this question by studying the correlation of inhibition abilities across people.  Are people who are good at ignoring the surrounding information in a standard flanker task that promote assimilation also good at ignoring the surrounding information in a modified flanker task that promotes contrast?  
+
+Correlation studies across attention tasks are certainly popular in cognition.  Indeed, far more expansive studies than ours which provide for far more correlations across tasks have been performed [@Miyake:etal:2000; @Barrett:etal:2004].  To the best of our knowledge, these studies use assimilative inhibition tasks such as the flanker interference with well-formed letters and anti-saccade tasks.  In fact, we are unaware of any individual-differences studies that use contrast tasks.  Here, we compare the correlations among people with contrast and assimilation.  Such a a positive correlation, if found, provides stronger evidence for a unified concept than just assimilation tasks because the correlation relates behaviorally opposing effects.
+
+The current literature on whether there should be common inhibition mechanisms across assimilation and contrast tasks is mixed.  Support for the common-mechanism view is as follows:  Most proposed behavioral and neural mechanisms of selective attention rely on a narrowing of receptive fields.  This narrowing process occurs whether the to-be-excluded information is contrastive or assimilative [e.g., @Cowan:1995;@Desimone:Duncan:1995;@Eriksen:Schultz:1979;@Hedden:Gabrieli:2010].  Behavioral evidence comes from @Miyake:etal:2000 who studied individual differences.  When variability across a range of executive-function tasks is decomposed, one recovered latent factor is a unified concept of inhibition.  Yet, there are strong arguments that contrast and assimilation are not the same process.  Most theories of contrast rely on a center-surround organization of low-level, perceptual receptive field structures [@Palmer:1999]. Most theories of assimilation flanker effects, however, are failures of response inhibition, which is conceptualized as a higher-level, top down process [@Eriksen:Eriksen:1974].  Behavioral evidence for distinct processes comes from @Rouder:King:2003 whose design is a bit complicated.  These researchers associated the letters *c* and *A* with one response, denoted $R_1$, and *e* and *H* with another, denoted $R_2$.  When well-formed letters were the target, assimilation to the response assignment of the background was observed.  For well-formed *A* letters, backgrounds of *c* resulted in higher proportion of $R_1$ response than did backgrounds of *e*.  When morphed letters were targets, the effect varied.  If morphs between *A* and *H* were surrounded by either *A* or *H*, the effect was contrastive.  Yet, if these same morphs were surrounded by *c* or *e*, the effect was assimilative.  @Rouder:King:2003 interpreted the assimilative effect to be at the response level and the contrastive effect to be at a perceptual level.
+
+We employ better stimulus control than @Rouder:King:2003.  We sought targets and backgrounds such that whether there was contrast or assimilation was a function of the background rather than the target.  Our targets were morphed letters like those in Figure \@ref(fig:past)B.  Our backgrounds came in two types, either a letter context such as in Figure \@ref(fig:past)B or a word context such as in \@ref(fig:past)C.  For the letter context, we expect large contrast effects as was observed by @Rouder:King:2003.  The rationale for the word context comes from @Neisser:1967.  We expect that a morph between *A* and *H* will be judged more "A" like in *C_T* context than *T_E* context.  This effect is assimilative, and it has been repeatedly demonstrated that there is an assimilative effect of word contexts for both visually and orally presented letters [@Baron:Thurston:1973;@Reicher:1969].  As an aside, this assimilation effect has been a motivating phenomenon in the development of connectionist models [e.g., @Carpenter:Grossberg:1987;@Rumelhart:McClelland:1982] where word nodes feed positive activation to corresponding letter nodes.
+
+In the following experiment, each participant identified several *A*-to-*H* morphs (see the top row of Figure \@ref(fig:stimulus)).  These target morphs were embedded within four background contexts (see the bottom row of Figure \@ref(fig:stimulus)).  By comparing performance in the *A*-letter and *H*-letter contexts, we assess each participant's ability to inhibit contrastive information.  By comparing performance in the *C_T*-word and *T_E*-word contexts, we assess each participant's ability to inhibit assimilative information.  Note that for each target, there are assimilative and contrastive background contexts such that the critical comparisons may be made across backgrounds.  To assess the question of whether inhibition across contrastive and assimilative contexts is common or distinct, we assess the correlation across individuals of their inhibition within the two context types.
+
 # Method
 
+## Sample Size Consideration
+The following experiment is a massively repeated within-subjects design.  Each participant observes 960 trials, a number that was as large as possible within an hour time frame.  The critical question is how many participants to use, and the key consideration is whether the main source of variability is within-trial noise or across-participant noise.  There is little guidance in the literature, and as a consequence we used a sequential approach where the critical Bayes factor, to be discussed subsequently, reached a ratio of 5-to-1 [@Rouder:2014].  In reality, we ran out even after reaching this goal to provide opportunities for participants to take part.  We ended with 93 usable participants who made 65,541 usable responses, and our Bayes factor was 25-to-1.  Although our protocol was not preregistered and did not follow a set sequential plan, we exercised good judgment.  Readers wishing the check can do so.   All of our data were made publicly available as they were collected and may be found at [https://github.com/PerceptionCognitionLab/data1/tree/master/ctxIndDif/flankerMorph4](https://github.com/PerceptionCognitionLab/data1/tree/master/ctxIndDif/flankerMorph4).  This mode of data collection is called Born Open Data [@Rouder:2016] and readers can see the effects of stopping at any point.
+
 ## Participants
-Ninety-nine undergraduates from the University of Missouri served as participants as part of an introductory course requirement.  Data from three participants were discarded due to a computer error and data from an additional three were discarded because twenty or more of their responses were shorter than a criterial 200 ms in duration.  The data from the remaining $93$ participants were used in analysis.  We analyzed the data with Bayesian methods, to be discussed subsequently, in a sequential fashion stopping when either the data were clearly evidential of the cited patterns [@Rouder:2014] or the semester ended.  Both occured together.  
+Ninety-nine undergraduates from the University of Missouri served as participants as part of an introductory course requirement.  Data from two participants were discarded due to a computer error and data from an additional four were discarded because twenty or more of their responses were shorter than a criterial 200 ms in duration.  The data from the remaining $93$ participants were used in analysis.
 
 ## Design
-The experiment was a $5\times 2 \times 2$ within-subject factorial design.  The first factor was the target, and it was manipulated through 5 levels from the letter *H* through the morphs to the letter *A*.  The second factor was the context type, and the background was either a letter or a word.  The final variable was context direction, a context that promotes  "A" or "H" responses.  We coded the *H* background and the *C_T* background as promoting "A" responses based on prior literature.  This coding does not determine the direction of results; it simply provides a clear language for disucssing them.
+The experiment was a $5\times 2 \times 2$ within-subject factorial design.  The first factor was the target, and it was manipulated through 5 levels from the letter *H* through the morphs to the letter *A*.  The second factor was the context type, and the background was either a letter or a word.  The final variable was context direction, a context that promotes "A" or "H" responses.  We coded the *H* background and the *C_T* background as promoting "A" responses based on prior literature.  This coding does not determine the direction of results; it simply provides a clear language for discussing them.
 
-## Material
-The stimuli are shown in Figure \@ref(fig:stimulus).   All targets appear in each of the four contexts, though the rates are not equal.  To emphasize the morphs, the three central targets in Figure \@ref(fig:stimulus) were each twice as likely to appear than each well-formed letter.
-
-```{r stimulus, fig.width= 6,fig.height=3.5,fig.cap="Stimuli.  **Top** Five targets.  **Bottom**  Four contexts.  The stimulus on a trial consisted of one of the four targets placed into the bank center location of the background context.", cache=TRUE}
+```{r stimulus, fig.width= 6,fig.height=3.5,fig.cap="Stimuli.  **Top** Five targets.  **Bottom**  Four contexts.  The stimulus on a trial consisted of one of the four targets placed into the blank center location of the background context.", cache=TRUE}
 layout(matrix(c(0,1,1,0,2,3,4,5,2,3,4,5),nrow=3,byrow=T))
 
 ### general variables
@@ -280,12 +282,15 @@ cat()
 the()
 ```
 
+## Material
+The stimuli are shown in Figure \@ref(fig:stimulus).   All targets appear in each of the four contexts, though the rates are not equal.  To emphasize the morphs, the three central targets in Figure \@ref(fig:stimulus) were each twice as likely to appear than each well-formed letter.
+
 ## Procedure
-Participants were presented with the stimuli and asked to judge whether the center letter was more similar to an "A" or an "H" by pressing the correpsonding keys on a standard keyboard.  Participants were explicitly instructed to ignore the background context and base their responses on the central target alone.
+Participants were presented with the stimuli and asked to judge whether the center letter was more similar to an "A" or an "H" by pressing the corresponding keys on a standard keyboard.  Participants were explicitly instructed to ignore the background context and base their responses on the central target alone.
 
 An experimental trial proceeded as follows: The screen was blank during a 1.5 sec foreperiod.  We warned participants that a target was about to appear as follows.  Two brief tones were presented 500 ms and 250 ms before the stimulus.  These tones allowed participants to precisely time the stimulus.  Next, the stimulus was presented for 100 ms, and thereafter, was replaced by a blank screen.  This blank screen remained until participant pressed either the "A" or "H" key to indicate their judgment about the target.  The response marked the end of the current trial and the beginning of the next one.  Responses and the time taken to respond was recorded.  A block consisted of 96 trials and the experimental session consisted of 10 blocks for a total of 960 trials.  Participants were encouraged to take breaks between blocks.  No feedback was given about participant responses during the course of the experimental session.  
 
-All experimenal sessions were conducted on MacMini computers running the operating system MacOSX 10.6.2 with Octave version 3.2.3.  This experimental procedure was approved by the Institutional Review Board at the University of Missouri.
+All experimental sessions were conducted on MacMini computers running the operating system MacOSX 10.6.2 with Octave version 3.2.3.  This experimental procedure was approved by the Institutional Review Board at the University of Missouri.
 
 # Results
 
@@ -317,11 +322,13 @@ dat.clean <- subset(dat,rt <2 & toofast == 0 & pixels != 1 & pixels != 5)
 
 Data were cleaned by discarding responses with latencies less than 200 ms and greater than 2 sec. These discards comprised about 1\% of the total.  Additionally, the first twenty trials of the session were considered practice and excluded.  These criteria were chosen before data collection.
 
-Figure \@ref(fig:avcfigures)A shows the proportion of "H" responses as a function of target and context.  As expected, the curves start low for *A* and *A*-like stimuli and increase as the targets become more *H*-like.  Solid and dashed lines denote letter and word contexts, respectively.  Filled and open points denote contexts that promote a "A" responses (*H*-letter and *C_T*-word contexts) and "H" responses (*A*-letter and *T_E*-word contexts), respectively.  A contrast effect may be seen for letter contexts.  Here, the *A*-letter context promoted higher proportions of "H" responses than the *H*-letter context did.  The opposed effect---assimilation---may be seen for the word contexts.  The context *T_E* promoted higher proportions of "H" responses than the *C_T* context did.
+Figures \@ref(fig:avcfigures)A and B show the proportion of "H" responses as a function of target and context.  As expected, the curves start low for *A* and *A*-like stimuli and increase as the targets become more *H*-like. Figure \@ref(fig:avcfigures)A displays the results for the letter contexts (*A*-letter and *H*-letter) and Figure \@ref(fig:avcfigures)B displays results for the word contexts (*C_T*-word and *T_E*-word).  Solid and dashed lines differentiate in each graph differentiates the contexts in each graph from one another.  A contrast effect may be seen for letter contexts.  Here, the *A*-letter context promoted higher proportions of "H" responses than the *H*-letter context did.  The opposed effect---assimilation---may be seen for the word contexts.  The context *T_E* promoted higher proportions of "H" responses than the *C_T* context did.
 
-```{r avcfigures, fig.width=8,fig.height=4.5,fig.cap = "Empirical Results. **A.** Response proportions for all four contexts.  Solid and dashed lines indicate letter and word contexts, respectively.  Filled and open points indicate A-promoting and H-promoting contexts, respectively. **B.** Individual effects in the letter contexts. The negative direction denotes a robust contrast effect. **C.** Individual effects in the word contexts. The positive direction denotes a robust assimilation effect.", cache=TRUE}
+<!-- Solid and dashed lines denote letter and word contexts, respectively.  Filled and open points denote contexts that promote a "A" responses (*H*-letter and *C_T*-word contexts) and "H" responses (*A*-letter and *T_E*-word contexts), respectively.  A contrast effect may be seen for letter contexts.  Here, the *A*-letter context promoted higher proportions of "H" responses than the *H*-letter context did.  The opposed effect---assimilation---may be seen for the word contexts.  The context *T_E* promoted higher proportions of "H" responses than the *C_T* context did.-->
+
+```{r avcfigures, fig.width=8,fig.height=8,fig.cap = "Empirical Results. **A.** Response proportions for letter contexts.  Solid and dashed lines differentiate between A-letter and H-letter contexts.  **B.** Response proportions for word contexts.  Solid and dashed lines differentiate between C_T-word and T_E-word contexts.  **C.** Individual effects in the letter contexts. The negative direction denotes a robust contrast effect. **D.** Individual effects in the word contexts. The positive direction denotes a robust assimilation effect.", cache=TRUE}
 library(graphics)
-par(mfrow=c(1,3))
+par(mfrow=c(2,2))
 ##############
 #DATA SETUP
 ##############
@@ -340,21 +347,35 @@ meanmeans.THE = rowMeans(means[4,,])
 ###########
 # Plot 1
 ###########
-plot(meanmeans.A, type = 'b', col = "lightsteelblue4", main= "A.", ylab = "Proportion of 'H' Responses", xlab = "Target", ylim = c(-.05,1.05),lwd = 2,pch=1,axes=F)
+plot(meanmeans.A, type = 'b', col = "dimgrey", main= "A.", ylab = "Proportion of 'H' Responses", xlab = "Target", ylim = c(-.05,1.05),lwd = 2,lty=2,pch=1,axes=F)
 axis(2)
 axis(1,at=1:5,label=c("A",2:4,"H"))
 
 lines(meanmeans.H, col = "slateblue4", type = 'b', pch=19, lwd = 2)
-lines(meanmeans.CAT,col = "lightsteelblue4", type = 'b', pch=19, lwd = 2, lty=2)
-lines(meanmeans.THE, col = "slateblue4", type = 'b', pch=1,lwd = 2, lty=2)
+# lines(meanmeans.CAT,col = "lightsteelblue4", type = 'b', pch=19, lwd = 2, lty=2)
+# lines(meanmeans.THE, col = "slateblue4", type = 'b', pch=1,lwd = 2, lty=2)
 par(xpd=T)
-legend(1,1.15,legend=c("A-letter","H-letter","C_T-word","T_E-word"),lty=c(1,1,2,2),lwd=c(1,1,1,1),pch=c(1,19,19,1),col=c("lightsteelblue4","slateblue4","lightsteelblue4","slateblue4"),bg="ghostwhite",title="Contexts")
+legend(1,1.15,legend=c("A-letter","H-letter"),lty=c(2,1),lwd=c(1,1),pch=c(1,19),col=c("dimgrey","slateblue4"),bg="ghostwhite",title="Contexts")
 par(xpd=F)
 
 ###########
 # Plot 2
 ###########
-plot((means[3,,1]-means[1,,1]), type = 'l', col=hsv(.6,1,1,.2), main= "B.", ylab = "Difference", xlab = "Target",ylim = c(-.8,.8),axes=F)
+plot(meanmeans.CAT, type = 'b', col = "dimgrey", main= "B.", ylab = "Proportion of 'H' Responses", xlab = "Target", ylim = c(-.05,1.05),lwd = 2,lty=2,pch=1,axes=F)
+axis(2)
+axis(1,at=1:5,label=c("A",2:4,"H"))
+
+#lines(meanmeans.H, col = "slateblue4", type = 'b', pch=19, lwd = 2)
+#lines(meanmeans.CAT,col = "lightsteelblue4", type = 'b', pch=19, lwd = 2, lty=2)
+lines(meanmeans.THE, col = "slateblue4", type = 'b', pch=19,lwd = 2)
+par(xpd=T)
+legend(1,1.15,legend=c("C_T-word","T_E-word"),lty=c(2,1),lwd=c(1,1),pch=c(1,19),col=c("dimgrey","slateblue4"),bg="ghostwhite",title="Contexts")
+par(xpd=F)
+
+###########
+# Plot 3
+###########
+plot((means[3,,1]-means[1,,1]), type = 'l', col=hsv(.6,1,1,.2), main= "C.", ylab = "Difference", xlab = "Target",ylim = c(-.8,.8),axes=F)
 mtext("Letter Context", line = -1, padj = 0, side = 3, las = 1)
 x=as.vector(round(seq(-.6,.6,.2),digits=1))
 par(las=1)
@@ -375,9 +396,9 @@ abline(h=0,lwd=3)
 maxcontrast=-1*min(meandiff)
 
 ###########
-# Plot 3
+# Plot 4
 ###########
-plot((means[4,,1]-means[2,,1]), type = 'l', col=hsv(.6,1,1,.2), main= "C.", ylab = "Difference", xlab = "Target",ylim = c(-.8,.8),axes=F)
+plot((means[4,,1]-means[2,,1]), type = 'l', col=hsv(.6,1,1,.2), main= "D.", ylab = "Difference", xlab = "Target",ylim = c(-.8,.8),axes=F)
 mtext("Word Context", line = -1, padj = 0, side = 3, las = 1)
 x=as.vector(round(seq(-.6,.6,.2),digits=1))
 par(las=1)
@@ -398,7 +419,7 @@ abline(h=0,lwd=3)
 maxassimilation=max(meandiff)
 ```
 
-Figure \@ref(fig:avcfigures)A shows effects averaged across individuals.  Effects for each individual are shown in Panels B and C.   To observe individual effects in the letter-context condition, we subtracted the proportion of "H" responses for the *A*-letter context from that for the *H*-letter context.  In this graph, positive values indicate an assimilation effect; zero indicates no effect of context direction; negative values indicate a contrast effect.  The following three points are noted:  1) The contrast effects of letter contexts are robust across individuals.  2) The size of these effects is much larger than usual.  The differences in proportions average as much as `r round(maxcontrast,digits=2)`, which dwarfs the size of differences in most experiments.  3) The degree of individual variability is also quite large.  This degree provides increased resolution in the following correlational analysis.  Figure \@ref(fig:avcfigures)C shows the same plot for the word context; it is formed by subtracting the proportion of H responses in the *C_T*-word context from that in the *T_E*-word context.  The story about individuals is largely the same: 1) seemingly every individual shows an assimilation effect, 2) the effect is large, averaging as much as `r round(maxassimilation,digits=2)`, and 3) there is a suitable range of variation.
+Figures \@ref(fig:avcfigures)A and B show effects averaged across individuals.  Effects for each individual are shown in Panels C and D.   To observe individual effects in the letter-context condition, we subtracted the proportion of "H" responses for the *A*-letter context from that for the *H*-letter context.  In this graph, positive values indicate an assimilation effect; zero indicates no effect of context direction; negative values indicate a contrast effect.  The following three points are noted:  1) The contrast effects of letter contexts are robust across individuals.  2) The size of these effects is much larger than usual.  The differences in proportions average as much as `r round(maxcontrast,digits=2)`, which dwarfs the size of differences in most experiments.  3) The degree of individual variability is also quite large.  This degree provides increased resolution in the following correlational analysis.  Figure \@ref(fig:avcfigures)D shows the same plot for the word context; it is formed by subtracting the proportion of H responses in the *C_T*-word context from that in the *T_E*-word context.  The story about individuals is largely the same: 1) seemingly every individual shows an assimilation effect, 2) the effect is large, averaging as much as `r round(maxassimilation,digits=2)`, and 3) there is a suitable range of variation.
 
 ```{r chain, cache=TRUE, warning=FALSE}
 #############
@@ -1318,13 +1339,13 @@ To place this correlation in context, it is helpful to consider the reliability 
 <!-- We used `r cite_r("r-references.bib")` for all our analyses. -->
 
 # Discussion
-Our goal here was to explore whether inhibition was mediate by a common or distinct mechanisms in assimilation and contrast contexts.  On one hand, inhibition is often conceptualized as a well integrated concept  [e.g., @Miyake:etal:2000].  On the other hand, assimilation is often thought of as a response-level cognitive process [@Eriksen:Eriksen:1974] whereas contrast is thought of as a low-level perceptual process [e.g, @Palmer:1999].  To explore this question, we assessed the correlation between individuals' ability to inhibit background assimilative information and their ability to inhibit background contrastive information.  Our approach relied on morph-letter targets.  Large assimilation effects were found when the surrounding, to-be-ignored information could potentially be a word, replicating the often observed top-down effect of word contexts on letter identification.  Contrast effects were found when the surrounding contexts were letters, replicating @Rouder:King:2003.  The key finding is a positive correlation across individuals.  Individuals who were better able to inhibit the contrastive effects of surrounding letter contexts  were better able to inhibit the assimilative effects of surrounding word contexts.
+Our goal here was to explore whether inhibition was mediate by a common or distinct mechanisms in assimilation and contrast contexts.  On one hand, inhibition is often conceptualized as a well-integrated concept [e.g., @Miyake:etal:2000].  On the other hand, assimilation is often thought of as a response-level cognitive process [@Eriksen:Eriksen:1974] whereas contrast is thought of as a low-level perceptual process [e.g., @Palmer:1999].  To explore this question, we assessed the correlation between individuals' ability to inhibit background assimilative information and their ability to inhibit background contrastive information.  Our approach relied on morph-letter targets.  Large assimilation effects were found when the surrounding, to-be-ignored information could potentially be a word, replicating the often observed top-down effect of word contexts on letter identification.  Contrast effects were found when the surrounding contexts were letters, replicating @Rouder:King:2003.  The key finding is a positive correlation across individuals.  Individuals who were better able to inhibit the contrastive effects of surrounding letter contexts  were better able to inhibit the assimilative effects of surrounding word contexts.
 
 The findings are surprising inasmuch as contrast and assimilation effects are generally thought to have different loci.  We think the correlation is of interest in itself.  Perhaps the most parsimonious account is from @Lachter:etal:2004, who provide an updated version of Broadband's classic early-attention theory [@Broadbent:1958].  Here attention acts fairly early but is imperfect and some irrelevant information is processed.  When it is, the ensuing contrast and assimilation effects  result.  In this view, the common variation across these tasks indexes the individual's raw ability to control selective attention.  Linking correlations with processing must be done tentatively.  The next step forward in this line of research is exploring how the correlations across contrastive and assimilative tasks interact with manipulations designed to affect spatial attention.
 
 #### Author's Contributions
 
-J. N. Rouder and S. M. Rafferty developed the study concept.  All authors contributed to the study design.  Programming of the experimental desgin was done by H. K. Snyder.  Data collection was led by S. M. Rafferty.  H. K. Snyder performed the data analysis and interpretation with the aid of J. M. Haaf under the supervision of J. N. Rouder.  H. K. Snyder and J. N. Rouder drafted the manuscript; S. M. Rafferty and J. M. Haaf provided critical revisions.  All authors approved the final version of the manuscript for submission.
+H.K.S. helped conceive the project, programed the experiment, performed the Bayesian data analysis, and contributed to the writing of the manuscript.  S. M. R. led data collection and provided initial analysis of the data.  J. M. H. contributed to the design and data analysis.  J. N. R. contributed to all aspects of the project except for data collection.  All authors take responsibility for the integrity of the data, analysis, and interpretation.
 
 \newpage
 
