@@ -44,7 +44,41 @@ output            : papaja::apa6_pdf
 ---
 
 ```{r start, include = FALSE}
+#############
+#LIBRARIES
+#############
+library("RCurl")
+library("msm")
+library("MASS")
+library("rvest")
+library("MCMCpack")
+library("mvtnorm")
 library("papaja")
+library("graphics")
+library("ellipse")
+library("graphics")
+library("mvnfast")
+
+#Data Retrieval Function
+read_github_dat <- function(url, extension, read_fun, which_extension) {
+  #Load required packages
+  if(!require("rvest")) stop("Please install the 'rvest' package.")
+  if(!require("RCurl")) stop("Please install the 'RCurl' package.")
+  if(!require("stringr")) stop("Please install the 'stringr' package.")
+  # Fetch file names
+  github_page <- read_html(url)
+  file_nodes <- html_nodes(github_page
+                           , ".content .css-truncate-target .js-navigation-open")
+  file_names <- html_text(file_nodes)
+  file_url <- html_attr(file_nodes, "href")[grep(extension, file_names)]
+  which_files <- html_attr(file_nodes, "href")[grep(which_extension, file_names)]
+  which_files <- as.numeric(str_sub(which_files, -3, -1))
+  file_url <- paste0("https://raw.githubusercontent.com", file_url)
+  file_url <- gsub("blob/", "", file_url)
+  data <- lapply(file_url[which_files], read_fun, fill = T)
+  data <- do.call("rbind", data)
+  data
+}
 ```
 
 The concepts of *spatial selective attention* and *response inhibition* have been topical in the psychological literature since at least @Helmholtz:1867 and @James:1890a.  The ability to inhibit some elements in the environment while focusing on other target elements is crucial to proper functioning [e.g., @Broadbent:1958;@Cowan:1995].  Failures to properly inhibit responses to inappropriate elements in the environment are used to describe and understand pathological development [@Barkley:1997;@Hasher:Zacks:1988].  Inhibition is usually treated as a fairly unified or homogenous concept.  It may be measured in tasks where the goal is to select or identify target items in the presence of to-be-ignored distractors.  We provide a novel and, in our opinion, an exceedingly strong test of whether spatial inhibition is a unified phenomenon.
@@ -298,26 +332,26 @@ All experimental sessions were conducted on MacMini computers running the operat
 ##############
 #DATA SETUP
 ##############
-mysub=c(1:13,15,17:44,46:51,53:72,74:94,96:97,99:101)
-mySubLab=sprintf("%03d",mysub)
-
-fileroot="https://raw.githubusercontent.com/PerceptionCognitionLab/data1/master/ctxIndDif/flankerMorph4/flankerMorph4.dat."
-filename=paste(fileroot,mySubLab,sep='')
-
-inputDat=read.table(url(filename[1]))
-for(i in 2:length(mysub)){
-  inputDatPiece=read.table(url(filename[i]))
-  inputDat=rbind(inputDat,inputDatPiece)
-}
-
-dat=inputDat
+dat <- read_github_dat(url = "https://github.com/PerceptionCognitionLab/data1/tree/master/ctxIndDif/flankerMorph4"
+                  , extension = ".dat."
+                  , read_fun = read.table
+                  , which_extension = ".ses.")
+#Add Variable Names
 header <- c("sub", "trial", "block", "trialpblock", "file", "frame", "pixels", "response", "choice", "rt", "toofast", "toofastN")
 colnames(dat) <- header
 
 #############
 #DATA SETUP
 #############
-dat.clean <- subset(dat,rt <2 & toofast == 0 & pixels != 1 & pixels != 5)
+#Participants 45 and 73 had some data collection hickups and have to be excluded
+sub.ex <- c(43, 73)
+dat.clean <- subset(dat, rt < 2 & toofast == 0 & !(sub %in% sub.ex))
+
+#############
+#DATA SETUP for morph-only analysis (excluding pure letter trials)
+#############
+dat.morphs <- subset(dat.clean, pixels != 1 & pixels != 5)
+                           # & sub!=75)
 ```
 
 Data were cleaned by discarding responses with latencies less than 200 ms and greater than 2 sec. These discards comprised about 1\% of the total.  Additionally, the first twenty trials of the session were considered practice and excluded.  These criteria were chosen before data collection.
@@ -327,13 +361,10 @@ Figures \@ref(fig:avcfigures)A and B show the proportion of "H" responses as a f
 <!-- Solid and dashed lines denote letter and word contexts, respectively.  Filled and open points denote contexts that promote a "A" responses (*H*-letter and *C_T*-word contexts) and "H" responses (*A*-letter and *T_E*-word contexts), respectively.  A contrast effect may be seen for letter contexts.  Here, the *A*-letter context promoted higher proportions of "H" responses than the *H*-letter context did.  The opposed effect---assimilation---may be seen for the word contexts.  The context *T_E* promoted higher proportions of "H" responses than the *C_T* context did.-->
 
 ```{r avcfigures, fig.width=8,fig.height=8,fig.cap = "Empirical Results. **A.** Response proportions for letter contexts.  Solid and dashed lines differentiate between A-letter and H-letter contexts.  **B.** Response proportions for word contexts.  Solid and dashed lines differentiate between C_T-word and T_E-word contexts.  **C.** Individual effects in the letter contexts. The negative direction denotes a robust contrast effect. **D.** Individual effects in the word contexts. The positive direction denotes a robust assimilation effect.", cache=TRUE}
-library(graphics)
 par(mfrow=c(2,2))
 ##############
 #DATA SETUP
 ##############
-dat.clean <- subset(dat, rt <2 & toofast == 0)
-
 means <- tapply(dat.clean$response, list(dat.clean$frame, dat.clean$pixels, dat.clean$sub), mean,na.rm=T)
 
 I <- length(unique(dat.clean$sub))
@@ -344,6 +375,7 @@ meanmeans.CAT = rowMeans(means[2,,])
 meanmeans.H = rowMeans(means[3,,])
 meanmeans.THE = rowMeans(means[4,,])
 
+par(mar = c(5.1, 5.1, 4.1, 2.1))
 ###########
 # Plot 1
 ###########
@@ -422,16 +454,6 @@ maxassimilation=max(meandiff)
 Figures \@ref(fig:avcfigures)A and B show effects averaged across individuals.  Effects for each individual are shown in Panels C and D.   To observe individual effects in the letter-context condition, we subtracted the proportion of "H" responses for the *A*-letter context from that for the *H*-letter context.  In this graph, positive values indicate an assimilation effect; zero indicates no effect of context direction; negative values indicate a contrast effect.  The following three points are noted:  1) The contrast effects of letter contexts are robust across individuals.  2) The size of these effects is much larger than usual.  The differences in proportions average as much as `r round(maxcontrast,digits=2)`, which dwarfs the size of differences in most experiments.  3) The degree of individual variability is also quite large.  This degree provides increased resolution in the following correlational analysis.  Figure \@ref(fig:avcfigures)D shows the same plot for the word context; it is formed by subtracting the proportion of H responses in the *C_T*-word context from that in the *T_E*-word context.  The story about individuals is largely the same: 1) seemingly every individual shows an assimilation effect, 2) the effect is large, averaging as much as `r round(maxassimilation,digits=2)`, and 3) there is a suitable range of variation.
 
 ```{r chain, cache=TRUE, warning=FALSE}
-#############
-#LIBRARIES
-#############
-library("RCurl")
-library("msm")
-library("MASS")
-library("rvest")
-library("MCMCpack")
-library("mvtnorm")
-
 ##############
 #IMPORTANT VALUES
 ##############
@@ -555,12 +577,12 @@ for(m in 2:M){
   
   V=solve(crossprod(X.add)+B)
   C=t(X.add)%*%(w)+B%*%munull
-  theta[m,]=mvrnorm(1,V%*%C,V)
+  theta[m,]=rmvn(1,V%*%C,V)
   
   #set mu
   V.mu = solve(t(X.mean)%*%B%*%X.mean+diag(L+2))
   C.mu = t(X.mean)%*%B%*%theta[m,] # plus something but it's zero right now in the prior on mu
-  mu[m,] = mvrnorm(1,V.mu%*%C.mu,V.mu)
+  mu[m,] = rmvn(1,V.mu%*%C.mu,V.mu)
   
   #set delta
   delta.shape = a +(I*L)/2
@@ -588,32 +610,27 @@ pvb =pvar[beta.idx]
 ```
 
 ```{r indchainminus, cache=TRUE, warning=FALSE}
-#############
-#DATA SETUP
-#############
-dat.clean <- subset(dat,rt <2 & toofast == 0 & pixels != 1 & pixels != 5 & sub!=75)
-
 ##############
 #IMPORTANT VALUES
 ##############
-I = length(unique(dat.clean$sub)) # number of participants
-J = length(unique(dat.clean$frame))/2 # number of frame types
-K = length(unique(dat.clean$frame))/2 #number of frame congruency
-L = length(unique(dat.clean$pixels)) #number of morphs
+I = length(unique(dat.morphs$sub)) # number of participants
+J = length(unique(dat.morphs$frame))/2 # number of frame types
+K = length(unique(dat.morphs$frame))/2 #number of frame congruency
+L = length(unique(dat.morphs$pixels)) #number of morphs
 n = 60 #number of replications
 
 ##############
 #DATA SETUP, DEFINITION:  ACCURACY RESPONSES
 ##############
-y=dat.clean$response
+y=dat.morphs$response
 N=length(y)
 
-sub=as.factor(dat.clean$sub)
+sub=as.factor(dat.morphs$sub)
 levels(sub)=1:I
 sub = as.numeric(sub)
-stim=ifelse(dat.clean$frame=="CAT"|dat.clean$frame=="THE",1,0)
-frame=ifelse(dat.clean$frame=="CAT"|dat.clean$frame=="H",-.5,.5)
-morph=dat.clean$pixels-1
+stim=ifelse(dat.morphs$frame=="CAT"|dat.morphs$frame=="THE",1,0)
+frame=ifelse(dat.morphs$frame=="CAT"|dat.morphs$frame=="H",-.5,.5)
+morph=dat.morphs$pixels-1
 
 ##############
 #CHAIN SETUP
@@ -722,12 +739,12 @@ for(m in 2:M){
   
   V=solve(crossprod(X.add)+B)
   C=t(X.add)%*%(w)+B%*%munull
-  indminustheta[m,]=mvrnorm(1,V%*%C,V)
+  indminustheta[m,]=rmvn(1,V%*%C,V)
   
   #set mu
   V.mu = solve(t(X.mean)%*%B%*%X.mean+diag(L+2))
   C.mu = t(X.mean)%*%B%*%indminustheta[m,] # plus something but it's zero right now in the prior on mu
-  mu[m,] = mvrnorm(1,V.mu%*%C.mu,V.mu)
+  mu[m,] = rmvn(1,V.mu%*%C.mu,V.mu)
   
   #set delta.gamma
   delta.gamma.shape = a +(I*L)/2
@@ -751,33 +768,6 @@ for (r in 2:M) indminuscor[r]=cor(indminustheta[r,alpha.idx],indminustheta[r,bet
 ```
 
 ```{r chainminus, cache=TRUE, warning=FALSE}
-#############
-#DATA SETUP
-#############
-dat.clean <- subset(dat,rt <2 & toofast == 0 & pixels != 1 & pixels != 5 & sub!=75)
-
-##############
-#IMPORTANT VALUES
-##############
-I = length(unique(dat.clean$sub)) # number of participants
-J = length(unique(dat.clean$frame))/2 # number of frame types
-K = length(unique(dat.clean$frame))/2 #number of frame congruency
-L = length(unique(dat.clean$pixels)) #number of morphs
-n = 60 #number of replications
-
-##############
-#DATA SETUP, DEFINITION:  ACCURACY RESPONSES
-##############
-y=dat.clean$response
-N=length(y)
-
-sub=as.factor(dat.clean$sub)
-levels(sub)=1:I
-sub = as.numeric(sub)
-stim=ifelse(dat.clean$frame=="CAT"|dat.clean$frame=="THE",1,0)
-frame=ifelse(dat.clean$frame=="CAT"|dat.clean$frame=="H",-.5,.5)
-morph=dat.clean$pixels-1
-
 ##############
 #CHAIN SETUP
 ##############
@@ -879,12 +869,12 @@ for(m in 2:M){
   
   V=solve(crossprod(X.add)+B)
   C=t(X.add)%*%(w)+B%*%munull
-  minustheta[m,]=mvrnorm(1,V%*%C,V)
+  minustheta[m,]=rmvn(1,V%*%C,V)
   
   #set mu
   V.mu = solve(t(X.mean)%*%B%*%X.mean+diag(L+2))
   C.mu = t(X.mean)%*%B%*%minustheta[m,] # plus something but it's zero right now in the prior on mu
-  mu[m,] = mvrnorm(1,V.mu%*%C.mu,V.mu)
+  mu[m,] = rmvn(1,V.mu%*%C.mu,V.mu)
   
   #set delta
   delta.shape = a +(I*L)/2
@@ -902,15 +892,13 @@ for(m in 2:M){
 
 To assess the correlation among individual assimilation and contrast effects, we developed a Bayesian hierarchical mixed model with a probit link.  The benefits of the modeling approach are two-fold:  First, it provides a principled means of combining data across the different targets.  Second, and more importantly, the hierarchical structure provides a form of regularization used to avoid overstating the range of individual variation [@Efron:Morris:1977;@Lehmann:Casella:1998;@Davis:etal:2017].  The model and corresponding analysis are described in an online supplement at https://github.com/PerceptionAndCognitionLab/ctx-flanker/tree/public/papers/current.  The main outputs are individual estimates of assimilation and contrast effects and a posterior distribution of the correlation.  The individual estimates are shown in the scatter plot in Figure \@ref(fig:modelfiguresminus)A; more positive values indicate a stronger assimilation and stronger contrast effects in the respective background contexts.
 
-```{r modelfiguresminus, fig.width = 6, fig.height = 4, fig.cap = "Model Results.  **A.** Each participant's estimated assimilation effect against their estimated contrast effect.  An ellipse denotes the standard deviations of the estimate and the blue regression line is the line of best fit.  **B.** The posterior distribution of the population correlation, $\\rho$, between assimilation and contrast.  The solid line denotes the prior distribution.",cache=TRUE}
+```{r modelfiguresminus, fig.width = 7, fig.height = 4, fig.cap = "Model Results.  **A.** Each participant's estimated assimilation effect against their estimated contrast effect.  An ellipse denotes the standard deviations of the estimate and the blue regression line is the line of best fit.  **B.** The posterior distribution of the population correlation, $\\rho$, between assimilation and contrast.  The solid line denotes the prior distribution.",cache=TRUE}
 #layout(matrix(c(1,1,1,4,4,4,1,1,1,4,4,4,1,1,1,4,4,4,2,2,2,3,3,3,2,2,2,3,3,3),nrow=5,byrow=T))
 #fig.width = 6, fig.height = 7.2
 par(mfrow=c(1,2))
 ###########
 # Plot 1
 ###########
-library(ellipse)
-library(graphics)
 # par(pty='s')
 myColor=hsv((1:I)/I,1,.7,1)
 plot(pma,pmb,col=myColor,pch=20,ylim=c(-.5,2.5),xlim=c(-.5,2.5), main= "A.", ylab = "Contrast Effect", xlab = "Assimilation Effect",frame.plot = F)
@@ -984,35 +972,34 @@ rhofactor =.5/rho.hist$density[21]
 #############
 #DATA SETUP
 #############
-dat.clean <- subset(dat,rt <2 & toofast == 0 & pixels != 1 & pixels != 5)
-FullN = nrow(dat.clean)
+FullN = nrow(dat.morphs)
 
 Even = seq(2,FullN,2)
 Odd = seq(1,FullN,2)
 
-dat.clean = dat.clean[Even,]
+dat.morphs.even = dat.morphs[Even,]
 
 ##############
 #IMPORTANT VALUES
 ##############
-I = length(unique(dat.clean$sub)) # number of participants
-J = length(unique(dat.clean$frame))/2 # number of frame types
-K = length(unique(dat.clean$frame))/2 #number of frame congruency
-L = length(unique(dat.clean$pixels)) #number of morphs
+I = length(unique(dat.morphs.even$sub)) # number of participants
+J = length(unique(dat.morphs.even$frame))/2 # number of frame types
+K = length(unique(dat.morphs.even$frame))/2 #number of frame congruency
+L = length(unique(dat.morphs.even$pixels)) #number of morphs
 n = 60 #number of replications
 
 ##############
 #DATA SETUP, DEFINITION:  ACCURACY RESPONSES
 ##############
-y=dat.clean$response
+y=dat.morphs.even$response
 N=length(y)
 
-sub=as.factor(dat.clean$sub)
+sub=as.factor(dat.morphs.even$sub)
 levels(sub)=1:I
 sub = as.numeric(sub)
-stim=ifelse(dat.clean$frame=="CAT"|dat.clean$frame=="THE",1,0)
-frame=ifelse(dat.clean$frame=="CAT"|dat.clean$frame=="H",-.5,.5)
-morph=dat.clean$pixels-1
+stim=ifelse(dat.morphs.even$frame=="CAT"|dat.morphs.even$frame=="THE",1,0)
+frame=ifelse(dat.morphs.even$frame=="CAT"|dat.morphs.even$frame=="H",-.5,.5)
+morph=dat.morphs.even$pixels-1
 
 ##############
 #CHAIN SETUP
@@ -1115,12 +1102,12 @@ for(m in 2:M){
   
   V=solve(crossprod(X.add)+B)
   C=t(X.add)%*%(w)+B%*%munull
-  theta[m,]=mvrnorm(1,V%*%C,V)
+  theta[m,]=rmvn(1,V%*%C,V)
   
   #set mu
   V.mu = solve(t(X.mean)%*%B%*%X.mean+diag(L+2))
   C.mu = t(X.mean)%*%B%*%theta[m,] # plus something but it's zero right now in the prior on mu
-  mu[m,] = mvrnorm(1,V.mu%*%C.mu,V.mu)
+  mu[m,] = rmvn(1,V.mu%*%C.mu,V.mu)
   
   #set delta
   delta.shape = a +(I*L)/2
@@ -1152,35 +1139,29 @@ even = cbind(post.alpha,post.beta)
 ##############
 #DATA SETUP
 ##############
-dat.clean <- subset(dat,rt <2 & toofast == 0 & pixels != 1 & pixels != 5)
-FullN = nrow(dat.clean)
-
-Even = seq(2,FullN,2)
-Odd = seq(1,FullN,2)
-
-dat.clean = dat.clean[Odd,]
+dat.morphs.off = dat.morphs[Odd,]
 
 ##############
 #IMPORTANT VALUES
 ##############
-I = length(unique(dat.clean$sub)) # number of participants
-J = length(unique(dat.clean$frame))/2 # number of frame types
-K = length(unique(dat.clean$frame))/2 #number of frame congruency
-L = length(unique(dat.clean$pixels)) #number of morphs
+I = length(unique(dat.morphs.off$sub)) # number of participants
+J = length(unique(dat.morphs.off$frame))/2 # number of frame types
+K = length(unique(dat.morphs.off$frame))/2 #number of frame congruency
+L = length(unique(dat.morphs.off$pixels)) #number of morphs
 n = 60 #number of replications
 
 ##############
 #DATA SETUP, DEFINITION:  ACCURACY RESPONSES
 ##############
-y=dat.clean$response
+y=dat.morphs.off$response
 N=length(y)
 
-sub=as.factor(dat.clean$sub)
+sub=as.factor(dat.morphs.off$sub)
 levels(sub)=1:I
 sub = as.numeric(sub)
-stim=ifelse(dat.clean$frame=="CAT"|dat.clean$frame=="THE",1,0)
-frame=ifelse(dat.clean$frame=="CAT"|dat.clean$frame=="H",-.5,.5)
-morph=dat.clean$pixels-1
+stim=ifelse(dat.morphs.off$frame=="CAT"|dat.morphs.off$frame=="THE",1,0)
+frame=ifelse(dat.morphs.off$frame=="CAT"|dat.morphs.off$frame=="H",-.5,.5)
+morph=dat.morphs.off$pixels-1
 
 ##############
 #CHAIN SETUP
@@ -1283,12 +1264,12 @@ for(m in 2:M){
   
   V=solve(crossprod(X.add)+B)
   C=t(X.add)%*%(w)+B%*%munull
-  theta[m,]=mvrnorm(1,V%*%C,V)
+  theta[m,]=rmvn(1,V%*%C,V)
   
   #set mu
   V.mu = solve(t(X.mean)%*%B%*%X.mean+diag(L+2))
   C.mu = t(X.mean)%*%B%*%theta[m,] # plus something but it's zero right now in the prior on mu
-  mu[m,] = mvrnorm(1,V.mu%*%C.mu,V.mu)
+  mu[m,] = rmvn(1,V.mu%*%C.mu,V.mu)
   
   #set delta
   delta.shape = a +(I*L)/2
@@ -1336,7 +1317,7 @@ Assimilation and contrast estimates show a positive relationship as seen by the 
 
 To place this correlation in context, it is helpful to consider the reliability of individual estimates.  We suspected high reliability because we had each participant perform a total of 960 trials, which is quite numerous.  We split each individual's data into odd and even trials, and reran the Bayesian probit regression analysis separately for the odd and even trials.  Each analysis provides an estimate of each individual's assimilation and contrast, and the assimilation estimates in the odd trials may be correlated with the assimilation in the even trials, and the same for the contrast estimates.  The correlation among individuals' assimilation estimates was `r round(alphacor,digits=2)`; the correlation among individuals' contrast estimates was `r round(betacor,digits=2)`.  These values when extrapolated to the full sample imply reliabilities of `r round(adjalphacor,digits=2)` and `r round(adjbetacor,digits=2)`, respectively.  Hence, much of the variation in the scatter is not due to trial-by-trial noise, but reflect true latent variation across individuals.
 
-<!-- We used `r cite_r("r-references.bib")` for all our analyses. -->
+
 
 # Discussion
 Our goal here was to explore whether inhibition was mediate by a common or distinct mechanisms in assimilation and contrast contexts.  On one hand, inhibition is often conceptualized as a well-integrated concept [e.g., @Miyake:etal:2000].  On the other hand, assimilation is often thought of as a response-level cognitive process [@Eriksen:Eriksen:1974] whereas contrast is thought of as a low-level perceptual process [e.g., @Palmer:1999].  To explore this question, we assessed the correlation between individuals' ability to inhibit background assimilative information and their ability to inhibit background contrastive information.  Our approach relied on morph-letter targets.  Large assimilation effects were found when the surrounding, to-be-ignored information could potentially be a word, replicating the often observed top-down effect of word contexts on letter identification.  Contrast effects were found when the surrounding contexts were letters, replicating @Rouder:King:2003.  The key finding is a positive correlation across individuals.  Individuals who were better able to inhibit the contrastive effects of surrounding letter contexts  were better able to inhibit the assimilative effects of surrounding word contexts.
