@@ -1,0 +1,1136 @@
+---
+title: "Common or Distinct Attention Mechanisms for Contrast and Assimilation?"
+shorttitle        : "Contrast and Assimilation"
+
+author: 
+  - name          : "Hope K. Snyder"
+    affiliation   : "1"
+    corresponding : yes 
+    address       : "205 McAlester Hall, University of Missouri, Columbia, MO 65211"
+    email         : "hks7w2@mail.missouri.edu"
+  - name: "Sean M. Rafferty"
+    affiliation: '1'
+  - name: "Julia M. Haaf"
+    affiliation: '1'
+  - name: "Jeffery N. Rouder"
+    affiliation: '2'
+    
+affiliation:
+  - id: '1'
+    institution: University of Missouri
+  - id: '2'
+    institution: University of California, Irvine
+
+author_note: >
+  This document was written in R-Markdown with code for data analysis integrated into the text.  The Markdown script is open and freely available at https://github.com/PerceptionAndCognitionLab/ctx-flanker/tree/public/papers/current.  The data were *born open* [@Rouder:2016] and are freely available at https://github.com/PerceptionCognitionLab/data1/tree/master/ctxIndDif/flankerMorph4
+  
+abstract: |
+  The ability to inhibit distractors while focusing on specific targets is crucial.  In most tasks, like Stroop or priming, the to-be-ignored distractors affect the response to be more like the distractors.  We call that assimilation.  Yet, in some tasks, the opposite holds.  Constrast occurs when the response is caused to be least like the distractors.  Contrast and assimilation are opposing behavioral effects, but they both occur when to-be-ignored information affects judgments.  We ask here whether inhibition across contrastive and assimilative tasks is common or distinct.  Assimilation and contrast are often thought to have different underlying psychological mechanisms, and we use a correlational analysis with hierarchical Bayesian models as a test of this hypothesis.  We designed tasks with large assimilation or contrast effects.  The stimuli are morphed letters, and whether there is contrast or assimilation depends on whether the surrounding information is a letter field (contrast) or a word field (assimilation).  Critically, a positive correlation was found - individuals who better inhibited contrast-inducing contexts also better inhibited assimilation-inducing contexts.  These results indicate inhibition is common, at least in part, across contrast and assimilation tasks.
+
+keywords: "Inhibition, Selective Attention, Contrast Effects, Assimilation Effects"
+wordcount: ' '
+
+bibliography: ["r-references.bib","lab.bib"]
+
+figsintext        : yes
+figurelist        : no
+tablelist         : no
+footnotelist      : no
+lineno            : no
+
+lang              : "english"
+class             : "man"
+output            : papaja::apa6_pdf
+csl               : apa6.csl
+---
+
+```{r}
+knitr::opts_chunk$set(warning=F)
+```
+
+
+```{r start, include = FALSE}
+#############
+#LIBRARIES
+#############
+library("RCurl")
+library("msm")
+library("MASS")
+library("rvest")
+library("MCMCpack")
+library("mvtnorm")
+library("papaja")
+library("graphics")
+library("ellipse")
+library("graphics")
+library("mvnfast")
+library("R2jags")
+
+#Data Retrieval Function
+read_github_dat <- function(url, extension, read_fun, which_extension) {
+  #Load required packages
+  if(!require("rvest")) stop("Please install the 'rvest' package.")
+  if(!require("RCurl")) stop("Please install the 'RCurl' package.")
+  if(!require("stringr")) stop("Please install the 'stringr' package.")
+  # Fetch file names
+  github_page <- read_html(url)
+  file_nodes <- html_nodes(github_page
+                           , ".content .css-truncate-target .js-navigation-open")
+  file_names <- html_text(file_nodes)
+  file_url <- html_attr(file_nodes, "href")[grep(extension, file_names)]
+  which_files <- html_attr(file_nodes, "href")[grep(which_extension, file_names)]
+  which_files <- as.numeric(str_sub(which_files, -3, -1))
+  file_url <- paste0("https://raw.githubusercontent.com", file_url)
+  file_url <- gsub("blob/", "", file_url)
+  data <- lapply(file_url[which_files], read_fun, fill = T)
+  data <- do.call("rbind", data)
+  data
+}
+```
+
+The concepts of *spatial selective attention* and *response inhibition* have been topical in the psychological literature since at least @Helmholtz:1867 and @James:1890a.  The ability to inhibit some elements in the environment while focusing on other target elements is crucial to cognitive functioning [e.g., @Broadbent:1958;@Cowan:1995].  Moreover, failures to properly inhibit responses to inappropriate elements in the environment are used to describe and understand pathological development [@Barkley:1997;@Hasher:Zacks:1988].  
+
+Inhibition is often treated as a unified or homogeneous concept [see @ReyMermet:etal:2018 for a review].  Accordingly, one might expect tasks that measure inhibition to co-vary together.  If inhibition is a unified process, then people who are particularly good at excluding irrelevant information in one task should be good at doing so in other tasks.  Yet, in individual-difference studies, there have been meager correlations across individuals among tasks that purportedly localize inhibition.  For example, consider the correlation between Stroop interference and flanker interference.  In the Stroop task, information from reading an item must be suppressed to accurately respond; in the flanker task, information from neighboring items must be suppressed to accurately respond.  Earlier work showed some evidence for a correlation among the Flanker and Stroop tasks [e.g., @Friedman:Miyake:2004], but more recent work has shown low or even slightly negative correlations  [e.g., @Hedge:etal:2018;@Pettigrew:Martin:2014;@ReyMermet:etal:2018].  @ReyMermet:etal:2018 provide a salient account of similarly meager correlations across a number of tasks and conclude that inhibition is distinct rather than unified.
+
+The distinction in results is also seen in studies that employ large batteries of inhibition tasks run across hundreds of people.  In these studies, researchers typically reduce the dimension of the data by using latent variables to decompose the covariation among tasks.  Unfortunately, most of these analyses have resulted in the awkward situation where factors largely load onto single tasks [@MacKillop:etal:2016; @ReyMermet:etal:2018], indicating a lack of covariation to decompose.  
+
+In this paper, we provide a different, more targeted assessment of inhibition. Here, we focus on an experimental method rather than latent variable modeling.  We focus our attention on two tasks that are very similar. Both tasks are versions of Eriksen flanker tasks where the participant must suppress surrounding visual information.  We leverage here the fact that sometimes very similar tasks result in exactly opposite behaviors. 
+
+In the Eriksen flanker task, the usual behavior is in a specific direction that we term *assimilation*.  Consider the display in Figure \@ref(fig:past)A where the goal is to identify the center letter as either an "A" or an "H."  If assimilation occurs, then people are more likely to misidentify the target *H* as an "A" when surrounded by *A*'s than when surrounded by *H*'s. Because they are making responses seemingly driven by the identity of the flankers, we say their inhibition failure leads to an *assimilation* of the background.
+
+Assimilation, however, is not the only possible outcome.  @Rouder:King:2003 used a modified version of the flanker task and found the opposite effect, which we call *contrast*.  Rather than using well-formed letters, Rouder and King's targets were morphed letters between *A* and *H* (see Figure \@ref(fig:past)B).  Perhaps surprisingly, morphs surrounded by *H*'s were *less likely* to be identified as an "H" than morphs surrounded by *A*'s.   This effect is exactly opposite of the typical assimilation because inhibition failures lead to a response that is in contrast to the background.
+
+```{r past, fig.width= 4,fig.height=3,fig.cap="Three flanker paradigms.  The participants' task is to identify the center letter as either an A or an H. **A.** Conventional Eriksen & Eriksen (1974) flanker paradigm results in assimilation.  **B.** Modified paradigm with morph-letter targets results in contrast (Rouder & King, 2003). **C.** Word contexts result in assimilation (Neisser, 1967).",cache=TRUE}
+### general variables
+sep=.1
+dist=1+sep
+x=c(0,0,0,1,1,1,2,2,2)*dist
+y=c(0,1,2,0,1,2,0,1,2)*dist
+
+myLet=function(a,pos){
+  b=(-1/9)*a+(1/18)
+  x1=x[pos]+c(0+b,1-b,(a/2)+(b))
+  x2=x[pos]+c(a+b,1-a-b,1-(a/2)-b)
+  y1=y[pos]+c(0,0,.5)
+  y2=y[pos]+c(1,1,.5)
+  segments(x1,y1,x2,y2,lwd=3)
+}
+
+myC=function(pos){
+  z0=.2
+  z1=.78
+  x1=x[pos]+c(z1,z0,z0)
+  x2=x[pos]+c(z0,z0,z1)
+  y1=y[pos]+c(0,0,1)
+  y2=y[pos]+c(0,1,1)
+  segments(x1,y1,x2,y2,lwd=3)
+}
+
+myT=function(pos){
+  z0=0
+  z1=1
+  x1=x[pos]+c(.5,z0)
+  x2=x[pos]+c(.5,z1)
+  y1=y[pos]+c(z0,z1)
+  y2=y[pos]+c(z1,z1)
+  segments(x1,y1,x2,y2,lwd=3)
+}
+
+myE=function(pos){
+  z0=.1
+  z1=.9
+  x1=x[pos]+c(z1,z0,z0,z0)
+  x2=x[pos]+c(z0,z0,z1,z0+.67*(z1-z0))
+  y1=y[pos]+c(0,0,1,.5)
+  y2=y[pos]+c(0,1,1,.5)
+  segments(x1,y1,x2,y2,lwd=3)
+}
+
+cat=function(center){
+  par(mar=c(0,3.5,0,1.5))
+  plot(c(0,3*dist),c(-.25,dist+.25),axes=F,typ='n',ylab=" ")
+  myC(1)
+  myLet(center/2,4)
+  myT(7)
+}
+
+the=function(center){
+  par(mar=c(0,1.5,0,3.5))
+  plot(c(0,3*dist),c(-.25,dist+.25),axes=F,typ='n')
+  myT(1)
+  myLet(center/2,4)
+  myE(7)
+}
+
+myArray=function(center,surround){
+  par(mar=c(0,1.5,0,3.5))
+  plot(c(0,3*dist),c(-.25,dist+.25),axes=F,typ='n')
+  myLet(surround/2,1)
+  myLet(center/2,4)
+  myLet(surround/2,7)
+}
+
+myArray2=function(center,surround){
+  par(mar=c(0,3.5,0,1.5))
+  plot(c(0,3*dist),c(-.25,dist+.25),axes=F,typ='n',ylab=" ")
+  myLet(surround/2,1)
+  myLet(center/2,4)
+  myLet(surround/2,7)
+}
+
+par(mfrow=c(3,2))
+############
+# Plot 1
+############
+myArray2(0,0)
+mtext("A.", line = 1, padj = 0, side = 2, las = 1, cex = 1.5)
+mtext("vs.", line = 1, padj = 0, side = 4, las = 1)
+myArray(0,1)
+
+############
+# Plot 2
+############
+myArray2((12/20),0)
+mtext("B.", line = 1, padj = 0, side = 2, las = 1, cex = 1.5)
+mtext("vs.", line = 1, padj = 0, side = 4, las = 1)
+myArray((12/20),1)
+
+############
+# Plot 3
+############
+cat((12/20))
+mtext("C.", line = 1, padj = 0, side = 2, las = 1, cex = 1.5)
+mtext("vs.", line = 1, padj = 0, side = 4, las = 1)
+the((12/20))
+```
+
+The presence of two different inhibition effects, assimilation and contrast, provides a fruitful window for examining the unity of inhibition.  Both contrast and assimilation here reflect a failure to completely inhibit the background, but they lead to opposite behavioral patterns.  The question then is whether the inhibition processes are the same in both tasks. We address this question by studying the correlation of inhibition abilities across people.  Are people who are affected by assimilation also affected by contrast?  We interpret the presence or absence of correlation rather conventionally.  If assimilation and contrast effects are correlated, especially if strongly so, then the tasks seemingly rely on some elements in common.    Conversely, if the effects of assimilation and contrast are unrelated, then the pattern serves as a marker that inhibition in these tasks relies on statistically separable processes.
+
+We employ a similar procedure to @Rouder:King:2003.  In Rouder and King, assimilation occurred when the target letter was clear, a pure letter.  In this condition, accuracy was high and response times were the salient indicator of performance.  Contrast occurred when the target letter was morphed.  Here, the choice proportions were variable and these choices were the salient indicator of performance.  Our concern with this earlier work is that assimilation and contrast occurred for different stimuli (clear vs. morphed) and for different behavioral measures (reaction time vs. choice).  To that end, we measure response choice and focus on morphed targets.  
+
+To induce contrast and assimilation, we manipulate the background as follows:  Our targets were morphed letters like those in Figure \@ref(fig:past)B.  Our backgrounds came in two types, either a letter context such as in Figure \@ref(fig:past)B or a word context such as in Figure \@ref(fig:past)C.  For the letter context, we expect large contrast effects as was observed by @Rouder:King:2003.  The rationale for the word context (Figure \@ref(fig:past)C) comes from @Neisser:1967.  We expect that a morph between *A* and *H* will be judged more "A" like in the *C_T* context than in the *T_E* context.  This effect is assimilative, and it has been repeatedly demonstrated that there is an assimilative effect of word contexts for both visually and aurally presented letters [@Baron:Thurston:1973;@Reicher:1969].  As an aside, this assimilation effect has been a motivating phenomenon in the development of connectionist models [e.g., @Carpenter:Grossberg:1987;@Rumelhart:McClelland:1982] where word nodes feed positive activation to corresponding letter nodes.
+
+In the following experiment, each participant identified several *A*-to-*H* morphs (see the top row of Figure \@ref(fig:stimulus)).  These target morphs were embedded within four background contexts (see the bottom row of Figure \@ref(fig:stimulus)).  By comparing performance in the *A*-letter and *H*-letter contexts, we assess each participant's ability to inhibit contrastive information.  By comparing performance in the *C_T*-word and *T_E*-word contexts, we assess each participant's ability to inhibit assimilative information.  Note that for each target, there are assimilative and contrastive background contexts such that the critical comparisons may be made across backgrounds.  We assess the correlation between inhibition measures for the two context types across individuals.  The critical question is whether inhibition across contrastive and assimilative contexts is unified or distinct.  If the two forms of inhibition share some common mechanism, then a non-zero, positive correlation is expected.  Conversely, if contrast and assimilation are distinct mechanisms of inhibition, then a null correlation is expected.  
+
+# Method
+
+## Participants, Exclusion, and Sampling Justification
+
+Ninety-nine undergraduates from the University of Missouri served as participants as part of an introductory course requirement.  Data from two participants were discarded due to a computer error and data from an additional four were discarded because twenty or more of their responses were shorter than a criterial 200 ms in duration.  The data from the remaining 93 participants were used in analysis.
+
+The critical question is how many participants to use.  Because the dependent measure, response choice, is not common, there is little guidance in the literature to justify a sampling plan.  We use Bayesian analysis, and, consequently, may use optional stopping.  As discussed by @Rouder:2014 and several others before him, the interpretation of the Bayes factor does not depend on whether one uses a set stopping rule or proceeds haphazardly.  We first peeked at the data around 20 people and observed a Bayes factor of 2-to-1, which we were not satisfied with.  By 50 participants, we had obtained a Bayes factor of 5-to-1.  At that point decided to run as many participants as we could until the end of the semester. At semesters end, we ran 93 usable participants who provided 65,541 usable responses.
+
+## Design
+The experiment was a $5\times 2 \times 2$ within-subject factorial design.  The first factor was the target, and it was manipulated through 5 levels from the letter *H* through the morphs to the letter *A*.  The second factor was the context type, the background was either a letter or a word.  The final variable was context direction, a context that promotes "A" or "H" responses.  We coded the *H* background and the *C_T* background as promoting "A" responses based on prior literature.  This coding does not determine the direction of results; it simply provides a clear language for discussing them.
+
+```{r stimulus, fig.width= 7,fig.height=3,fig.cap="Stimuli.  **Top** The five targets used in the experiment.  **Bottom**  The four backgrounds.  The stimulus on a trial consisted of one of the five targets placed into the blank center location of the $3\\times 3$ grid background.", cache=TRUE}
+layout(matrix(c(0,1,1,1,0,2,3,0,4,5,2,3,0,4,5),nrow=3,byrow=T))
+
+### general variables
+background=c(1:4,6:9)
+wbackground=c(1,3,4,6,7,9)
+sep=.1
+dist=1+sep
+x=c(0,0,0,1,1,1,2,2,2,3,3,3,4,4,4)*dist
+y=c(0,1,2,0,1,2,0,1,2,0,1,2,0,1,2)*dist
+
+### FUNCTIONS USED
+myLet=function(a,pos){
+  b=(-1/9)*a+(1/18)
+  x1=x[pos]+c(0+b,1-b,(a/2)+(b))
+  x2=x[pos]+c(a+b,1-a-b,1-(a/2)-b)
+  y1=y[pos]+c(0,0,.5)
+  y2=y[pos]+c(1,1,.5)
+  segments(x1,y1,x2,y2,lwd=3)
+}
+
+myBox=function(pos){
+  z0=0
+  z1=1		
+  x1=x[pos]+c(z0,z0,z1,z1,z0,z1)
+  x2=x[pos]+c(z0,z1,z1,z0,z1,z0)
+  y1=y[pos]+c(0,1,1,0,0,0)
+  y2=y[pos]+c(1,1,0,0,1,1)
+  segments(x1,y1,x2,y2,lwd=3)
+}
+
+myC=function(pos){
+  z0=.2
+  z1=.78
+  x1=x[pos]+c(z1,z0,z0)
+  x2=x[pos]+c(z0,z0,z1)
+  y1=y[pos]+c(0,0,1)
+  y2=y[pos]+c(0,1,1)
+  segments(x1,y1,x2,y2,lwd=3)
+}
+
+myT=function(pos){
+  z0=0
+  z1=1
+  x1=x[pos]+c(.5,z0)
+  x2=x[pos]+c(.5,z1)
+  y1=y[pos]+c(z0,z1)
+  y2=y[pos]+c(z1,z1)
+  segments(x1,y1,x2,y2,lwd=3)
+}
+
+myE=function(pos){
+  z0=.1
+  z1=.9
+  x1=x[pos]+c(z1,z0,z0,z0)
+  x2=x[pos]+c(z0,z0,z1,z0+.67*(z1-z0))
+  y1=y[pos]+c(0,0,1,.5)
+  y2=y[pos]+c(0,1,1,.5)
+  segments(x1,y1,x2,y2,lwd=3)
+}
+
+cat=function(){
+  par(mar=c(0,0,0,0))
+  plot(c(0,3*dist),c(0,3*dist),axes=F,typ='n')
+  for (i in wbackground) 
+    myBox(i)
+  myC(2)
+  myT(8)
+}
+
+the=function(){
+  par(mar=c(0,0,0,0))
+  plot(c(0,3*dist),c(0,3*dist),axes=F,typ='n')
+  for (i in wbackground) 
+    myBox(i)
+  myT(2)
+  myE(8)
+}
+
+myArray=function(surround){
+  par(mar=c(0,0,0,0))
+  plot(c(0,3*dist),c(0,3*dist),axes=F,typ='n')
+  for (i in background) 
+    myLet(surround/2,i)
+}
+
+myArray2=function(left,midleft,mid,midright,right){
+  par(mar=c(0,0,0,0))
+  plot(c(0,5*dist),c(0,dist),axes=F,typ='n')
+  myLet(left/2,1)
+  myLet(midleft/2,4)
+  myLet(mid/2,7)
+  myLet(midright/2,10)
+  myLet(right/2,13)
+}
+
+myArray2(1,(14/20),(12/20),(10/20),0)
+myArray(0)
+myArray(1)
+cat()
+the()
+```
+
+## Material
+The stimuli are shown in Figure \@ref(fig:stimulus).   The top row contains the five target letters.  The bottom row contains the four $3\times3$ letter grid contexts with a space left in the middle for the target.  The backgrounds are exactly as shown.   The X-in-a-box characters were used in the word contexts to give them the same overall dimension as the letter contexts.  All target letters appeared in each of the four contexts, though the rates were not equal.  To emphasize the morphs, the three central targets in Figure \@ref(fig:stimulus) were each twice as likely to appear than each well-formed letter.
+
+## Procedure
+Participants were presented with the stimuli and asked to judge whether the center letter was more similar to an "A" or an "H" by pressing the corresponding keys on a standard keyboard.  Participants were explicitly instructed to ignore the background context and base their responses on the central target alone.
+
+An experimental trial proceeded as follows: The screen was blank during a 1.5 sec foreperiod.  We warned participants that a target within one of the context grids was about to appear as follows.  Two brief tones were presented 500 ms and 250 ms before the stimulus.  These tones allowed participants to precisely time the stimulus.  Next, the stimulus was presented for 100 ms, and thereafter, was replaced by a blank screen.  This blank screen remained until participant pressed either the "A" or "H" key to indicate their judgment about the target.  The response marked the end of the current trial and the beginning of the next one.  Responses and the time taken to respond was recorded.  A block consisted of 96 trials and the experimental session consisted of 10 blocks for a total of 960 trials.  Participants were encouraged to take breaks between blocks.  No feedback was given about participant responses during the course of the experimental session.  
+
+All experimental sessions were conducted on MacMini computers running the operating system MacOSX 10.6.2 with Octave version 3.2.3.  This experimental procedure was approved by the Institutional Review Board at the University of Missouri.
+
+## Data Curation
+Data were *born-open* [@Rouder:2016] in that they were made publicly available as they were collected.   They may be found at [https://github.com/PerceptionCognitionLab/data1/tree/master/ctxIndDif/flankerMorph4](https://github.com/PerceptionCognitionLab/data1/tree/master/ctxIndDif/flankerMorph4).  
+
+# Results
+
+```{r datagrab, cache=TRUE}
+##############
+#DATA SETUP
+##############
+dat <- read_github_dat(url = "https://github.com/PerceptionCognitionLab/data1/tree/master/ctxIndDif/flankerMorph4"
+                  , extension = ".dat."
+                  , read_fun = read.table
+                  , which_extension = ".ses.")
+#Add Variable Names
+header <- c("sub", "trial", "block", "trialpblock", "file", "frame", "pixels", "response", "choice", "rt", "toofast", "toofastN")
+colnames(dat) <- header
+
+#############
+#DATA SETUP
+#############
+#Participants 45 and 73 had some data collection hickups and have to be excluded
+sub.ex <- c(43, 73)
+dat.clean <- subset(dat, rt < 2 & toofast == 0 & !(sub %in% sub.ex))
+
+#############
+#DATA SETUP for morph-only analysis (excluding pure letter trials)
+#############
+# Participants 45 and 73 had some data collection hickups and have to be excluded
+# Participant 75 was seen to be an outlier in performance, post-hoc exclusion
+sub.ex <- c(43, 73, 75)
+dat.morph <- subset(dat, rt < 2 & toofast == 0 & pixels != 1 & pixels != 5 & !(sub %in% sub.ex))
+```
+
+Data were cleaned by discarding responses with latencies less than 200 ms and greater than 2 sec. These discards comprised about 1\% of the total.  Additionally, the first twenty trials of the session were considered practice and excluded.  These criteria were chosen before data collection.
+
+Figures \@ref(fig:avcfigures)A and B show the proportion of "H" responses as a function of target and context.  As expected, the curves start low for *A* and *A*-like stimuli and increase as the targets become more *H*-like. Figure \@ref(fig:avcfigures)A displays the results for the letter contexts (*A*-letter and *H*-letter) and Figure \@ref(fig:avcfigures)B displays results for the word contexts (*C_T*-word and *T_E*-word).  Solid and dashed lines in Panel A show the effect of contexts.  The effect here is contrast as a morph is more likely to be identified as an "H" when surrounded by $A$s than surrounded by $H$s.   The opposite effect---assimilation---may be seen in the word contexts.  A morph in the context *T_E* is more likely to be identified as an"H" than in the context *C_T*.
+
+
+```{r avcfigures, fig.width=8,fig.height=8,fig.cap = "Empirical Results. **A.** Response proportions for letter contexts.  Solid and dashed lines differentiate between A-letter and H-letter contexts.  **B.** Response proportions for word contexts.  Solid and dashed lines differentiate between C_T-word and T_E-word contexts.  **C.** Individual effects in the letter contexts. The negative direction denotes a robust contrast effect. **D.** Individual effects in the word contexts. The positive direction denotes a robust assimilation effect.", cache=TRUE}
+par(mfrow=c(2,2))
+##############
+#DATA SETUP
+##############
+means <- tapply(dat.clean$response, list(dat.clean$frame, dat.clean$pixels, dat.clean$sub), mean,na.rm=T)
+
+I <- length(unique(dat.clean$sub))
+J <- length(unique(dat.clean$frame))
+
+meanmeans.A = rowMeans(means[1,,])
+meanmeans.CAT = rowMeans(means[2,,])
+meanmeans.H = rowMeans(means[3,,])
+meanmeans.THE = rowMeans(means[4,,])
+
+par(mar = c(5.1, 5.1, 4.1, 2.1))
+###########
+# Plot 1
+###########
+plot(meanmeans.A, type = 'b', col = "dimgrey", main= "A.", ylab = "Proportion of 'H' Responses", xlab = "Target", ylim = c(-.05,1.05),lwd = 2,lty=2,pch=1,axes=F)
+axis(2)
+axis(1,at=1:5,label=c("A","A-like","Mid","H-like","H"))
+
+lines(meanmeans.H, col = "slateblue4", type = 'b', pch=19, lwd = 2)
+# lines(meanmeans.CAT,col = "lightsteelblue4", type = 'b', pch=19, lwd = 2, lty=2)
+# lines(meanmeans.THE, col = "slateblue4", type = 'b', pch=1,lwd = 2, lty=2)
+par(xpd=T)
+legend(1,1.15,legend=c("A-letter","H-letter"),lty=c(2,1),lwd=c(1,1),pch=c(1,19),col=c("dimgrey","slateblue4"),bg="ghostwhite",title="Contexts")
+par(xpd=F)
+
+###########
+# Plot 2
+###########
+plot(meanmeans.CAT, type = 'b', col = "dimgrey", main= "B.", ylab = "Proportion of 'H' Responses", xlab = "Target", ylim = c(-.05,1.05),lwd = 2,lty=2,pch=1,axes=F)
+axis(2)
+axis(1,at=1:5,label=c("A","A-like","Mid","H-like","H"))
+
+#lines(meanmeans.H, col = "slateblue4", type = 'b', pch=19, lwd = 2)
+#lines(meanmeans.CAT,col = "lightsteelblue4", type = 'b', pch=19, lwd = 2, lty=2)
+lines(meanmeans.THE, col = "slateblue4", type = 'b', pch=19,lwd = 2)
+par(xpd=T)
+legend(1,1.15,legend=c("C_T-word","T_E-word"),lty=c(2,1),lwd=c(1,1),pch=c(1,19),col=c("dimgrey","slateblue4"),bg="ghostwhite",title="Contexts")
+par(xpd=F)
+
+###########
+# Plot 3
+###########
+plot((means[3,,1]-means[1,,1]), type = 'l', col=hsv(.6,1,1,.2), main= "C.", ylab = "Difference", xlab = "Target",ylim = c(-.8,.8),axes=F)
+mtext("Letter Context", line = -1, padj = 0, side = 3, las = 1)
+x=as.vector(round(seq(-.6,.6,.2),digits=1))
+par(las=1)
+axis(2,at=seq(-.8,.8,.2),labels=c("Favors A",x,"Favors H"))
+par(las=0)
+axis(1,at=1:5,label=c("A","A-like","Mid","H-like","H"))
+for(i in 2:I){
+  lines((means[3,,i]-means[1,,i])
+        , col=hsv(.6,1,1,.2))
+}
+meandiff <- rowMeans((means[3,,]-means[1,,]))
+lines(meandiff, col = "darkred" , lwd = 3)
+points(meandiff, col = "darkred", pch=19)
+abline(h=0,lwd=3)
+# legend(3,-.7,legend=c("H-A"),bg="ghostwhite",xjust=.5)
+# rect(2.5,-.85,3.5,-.75,border="black",col="ghostwhite")
+# mtext("H-A",side=1,line=-1.5,cex=.75)
+maxcontrast=-1*min(meandiff)
+
+###########
+# Plot 4
+###########
+plot((means[4,,1]-means[2,,1]), type = 'l', col=hsv(.6,1,1,.2), main= "D.", ylab = "Difference", xlab = "Target",ylim = c(-.8,.8),axes=F)
+mtext("Word Context", line = -1, padj = 0, side = 3, las = 1)
+x=as.vector(round(seq(-.6,.6,.2),digits=1))
+par(las=1)
+axis(2,at=seq(-.8,.8,.2),labels=c("Favors A",x,"Favors H"))
+par(las=0)
+axis(1,at=1:5,label=c("A","A-like","Mid","H-like","H"))
+for(i in 2:I){
+  lines((means[4,,i]-means[2,,i])
+        , col=hsv(.6,1,1,.2))
+}
+meandiff <- rowMeans((means[4,,]-means[2,,]))
+lines(meandiff, col = "darkred" , lwd = 3)
+points(meandiff, col = "darkred", pch=19)
+abline(h=0,lwd=3)
+#legend(3,-.7,legend=c("T_E-C_T"),bg="ghostwhite",xjust=.5)
+# rect(2,-.85,4,-.75,border="black",col="ghostwhite")
+# mtext("T_E-C_T",side=1,line=-1.5,cex=.75)
+maxassimilation=max(meandiff)
+```
+
+Figures \@ref(fig:avcfigures)A and B show effects averaged across individuals.  Effects for each individual are shown in Panels C and D.   To observe individual effects in the letter-context condition, we subtracted the proportion of "H" responses for the *A*-letter context from that for the *H*-letter context.  In this graph, positive values indicate an assimilation effect; zero indicates no effect of context direction; negative values indicate a contrast effect.  The following three points are noted:  1) The contrast effects of letter contexts are robust across individuals.  2) The size of these effects is much larger than usual.  The differences in proportions average as much as `r round(maxcontrast,digits=2)`, which dwarfs the size of differences in most experiments.  3) The degree of individual variability is also quite large.  This degree provides increased resolution in the following correlational analysis.  Figure \@ref(fig:avcfigures)D shows the same plot for the word context; it is formed by subtracting the proportion of H responses in the *C_T*-word context from that in the *T_E*-word context.  The story about individuals is largely the same: 1) seemingly every individual shows an assimilation effect, 2) the effect is large, averaging as much as `r round(maxassimilation,digits=2)`, and 3) there is a suitable range of variation.
+
+```{r chain, cache=TRUE, include=FALSE, message=FALSE, warning=FALSE}
+##############
+#IMPORTANT VALUES
+##############
+I = length(unique(dat.clean$sub)) # number of participants 
+J = length(unique(dat.clean$frame))/2 # number of frame types
+K = length(unique(dat.clean$frame))/2 #number of frame congruency
+L = length(unique(dat.clean$pixels)) #number of morphs
+n = 60 #number of replications
+
+##############
+#DATA SETUP, DEFINITION:  ACCURACY RESPONSES
+##############
+Y=dat.clean$response
+N=length(Y)
+
+sub=as.factor(dat.clean$sub)
+levels(sub)=1:I
+sub = as.numeric(sub)
+stim=ifelse(dat.clean$frame=="CAT"|dat.clean$frame=="THE",1,2)
+frame=ifelse(dat.clean$frame=="CAT"|dat.clean$frame=="H",1,2)
+morph=dat.clean$pixels
+
+##############
+#CHAIN SETUP (Things JAGS needs to worry about)
+##############
+#REPITIONS
+##############
+M=1000
+
+stimval=c(0,1)
+frameval=c(-(1/2),(1/2))
+
+theta=c("alpha","beta")
+nVar=length(theta)
+sigma=.05*diag(nVar)
+
+data=list("Y","I","J","K","L","N","sub","stim","frame","morph","stimval","frameval","nVar","sigma")
+
+# Initial Values JAGS figures out
+
+##############
+#PARAMETERS TO ESTIMATE
+##############
+param = c("mu","theta","rho","alpha","beta")
+
+##############
+# JAGS MODEL
+##############
+CAjags <- function() {
+  #Data level
+  for (n in 1:N){
+    Y[n] ~ dbern(phi(mu[sub[n],stim[n],frame[n],morph[n]]))
+  }
+  
+    
+  # Computing Mu
+  for(i in 1:I){
+    for (j in 1:J){
+      for (k in 1:K){
+        for (l in 1:L){
+          mu[i,j,k,l] <- gamma[i,l]+stimval[j]*frameval[k]*alpha[i]+(1-stimval[j])*frameval[k]*beta[i]
+        }
+      }
+    }
+  }
+    
+  #Priors for Alpha and Beta
+  # Theta=c(alpha,beta)
+  for (i in 1:I){
+    theta[i,1:nVar] ~ dmnorm(mutheta[1:nVar],invSig[1:nVar,1:nVar])
+    
+    alpha[i] = theta[i,1]
+    beta[i] = theta[i,2]
+  }
+  
+  #Hyperpriors for A and C effects
+    for(v in 1:nVar){
+      mutheta[v] ~ dnorm(0,1)
+    }
+    invSig ~ dwish(sigma,3)
+    Sig=inverse(invSig)
+    
+  #Getting sigmas and rho out
+    a.sig2 = Sig[1,1]
+    b.sig2 = Sig[2,2]
+      
+    rho = (Sig[1,2]/sqrt(a.sig2*b.sig2))
+  
+  # Gamma
+  for (i in 1:I){
+    for(l in 1:L){
+      gamma[i,l] ~ dnorm(nu,invdelta)
+    }
+  }
+  
+  #Hyperpriors for Morph effects
+    nu ~ dnorm(0,1)
+    invdelta ~ dgamma(.5,.01)
+    delta <- 1/invdelta
+}
+
+
+##############
+# JAGS SAMPLING CHAIN
+##############
+samples = jags(data, parameters.to.save = param, model.file=CAjags, n.chains=1, n.iter=M, n.burnin=1)
+
+##############
+# RESULTS
+##############
+alpha = samples$BUGSoutput$sims.list$alpha
+beta = samples$BUGSoutput$sims.list$beta
+
+post.mean.a = apply(alpha,2,mean)
+post.var.a = apply(alpha,2,var)
+post.mean.b = apply(beta,2,mean)
+post.var.b = apply(beta,2,var)
+
+post.cor=cor(post.mean.a,post.mean.b)
+```
+
+```{r indchainminus, cache=TRUE, include=FALSE, message=FALSE, warning=FALSE}
+##############
+#IMPORTANT VALUES
+##############
+I = length(unique(dat.morph$sub)) # number of participants 
+J = length(unique(dat.morph$frame))/2 # number of frame types
+K = length(unique(dat.morph$frame))/2 #number of frame congruency
+L = length(unique(dat.morph$pixels)) #number of morphs
+n = 60 #number of replications
+
+##############
+#DATA SETUP, DEFINITION:  ACCURACY RESPONSES
+##############
+Y=dat.morph$response
+N=length(Y)
+
+sub=as.factor(dat.morph$sub)
+levels(sub)=1:I
+sub = as.numeric(sub)
+stim=ifelse(dat.morph$frame=="CAT"|dat.morph$frame=="THE",1,2)
+frame=ifelse(dat.morph$frame=="CAT"|dat.morph$frame=="H",1,2)
+morph=dat.morph$pixels-1 #because pixels is 2,3,4
+
+##############
+#CHAIN SETUP (Things JAGS needs to worry about)
+##############
+#REPITIONS
+##############
+M=1000
+
+stimval=c(0,1)
+frameval=c(-(1/2),(1/2))
+
+data=list("Y","I","J","K","L","N","sub","stim","frame","morph","stimval","frameval")
+
+# Initial Values jags figures out
+
+##############
+#PARAMETERS TO ESTIMATE
+##############
+param = c("mu","alpha","beta")
+
+##############
+# JAGS MODEL
+##############
+IAjags <- function() {
+  #Data level
+  for (n in 1:N){
+    Y[n] ~ dbern(phi(mu[sub[n],stim[n],frame[n],morph[n]]))
+  }
+  
+    
+  # Computing Mu
+  for(i in 1:I){
+    for (j in 1:J){
+      for (k in 1:K){
+        for (l in 1:L){
+          mu[i,j,k,l] <- gamma[i,l]+stimval[j]*frameval[k]*alpha[i]+(1-stimval[j])*frameval[k]*beta[i]
+        }
+      }
+    }
+  }
+    
+  #Priors
+  # Alpha
+  for (i in 1:I){
+    alpha[i] ~ dnorm(nu[1],invdelta[1])
+  }
+  # Beta
+  for (i in 1:I){
+    beta[i] ~ dnorm(nu[2],invdelta[2])
+  }
+  # Gamma
+  for (i in 1:I){
+    for(l in 1:L){
+      gamma[i,l] ~ dnorm(nu[3],invdelta[3])
+    }
+  }
+  
+    #Hyperpriors for effects
+    for(k in 1:L){
+      nu[k] ~ dnorm(0,1)
+      invdelta[k] ~ dgamma(.5,.01)
+      delta[k] <- 1/invdelta[k]
+    }
+}
+
+
+##############
+# JAGS SAMPLING CHAIN
+##############
+samples = jags(data, parameters.to.save = param, model.file=IAjags, n.chains=1, n.iter=M, n.burnin=1)
+```
+
+```{r chainminus, cache=TRUE, include=FALSE, message=FALSE, warning=FALSE}
+##############
+#IMPORTANT VALUES
+##############
+I = length(unique(dat.morph$sub)) # number of participants 
+J = length(unique(dat.morph$frame))/2 # number of frame types
+K = length(unique(dat.morph$frame))/2 #number of frame congruency
+L = length(unique(dat.morph$pixels)) #number of morphs
+n = 60 #number of replications
+
+##############
+#DATA SETUP, DEFINITION:  ACCURACY RESPONSES
+##############
+Y=dat.morph$response
+N=length(Y)
+
+sub=as.factor(dat.morph$sub)
+levels(sub)=1:I
+sub = as.numeric(sub)
+stim=ifelse(dat.morph$frame=="CAT"|dat.morph$frame=="THE",1,2)
+frame=ifelse(dat.morph$frame=="CAT"|dat.morph$frame=="H",1,2)
+morph=dat.morph$pixels-1
+
+##############
+#CHAIN SETUP (Things JAGS needs to worry about)
+##############
+#REPITIONS
+##############
+M=1000
+
+stimval=c(0,1)
+frameval=c(-(1/2),(1/2))
+
+theta=c("alpha","beta")
+nVar=length(theta)
+sigma=.05*diag(nVar)
+
+data=list("Y","I","J","K","L","N","sub","stim","frame","morph","stimval","frameval","nVar","sigma")
+
+# Initial Values JAGS figures out
+
+##############
+#PARAMETERS TO ESTIMATE
+##############
+param = c("mu","theta","rho","alpha","beta")
+
+##############
+# JAGS MODEL
+##############
+CAjags <- function() {
+  #Data level
+  for (n in 1:N){
+    Y[n] ~ dbern(phi(mu[sub[n],stim[n],frame[n],morph[n]]))
+  }
+  
+    
+  # Computing Mu
+  for(i in 1:I){
+    for (j in 1:J){
+      for (k in 1:K){
+        for (l in 1:L){
+          mu[i,j,k,l] <- gamma[i,l]+stimval[j]*frameval[k]*alpha[i]+(1-stimval[j])*frameval[k]*beta[i]
+        }
+      }
+    }
+  }
+    
+  #Priors for Alpha and Beta
+  # Theta=c(alpha,beta)
+  for (i in 1:I){
+    theta[i,1:nVar] ~ dmnorm(mutheta[1:nVar],invSig[1:nVar,1:nVar])
+    
+    alpha[i] = theta[i,1]
+    beta[i] = theta[i,2]
+  }
+  
+  #Hyperpriors for A and C effects
+    for(v in 1:nVar){
+      mutheta[v] ~ dnorm(0,1)
+    }
+    invSig ~ dwish(sigma,3)
+    Sig=inverse(invSig)
+    
+  #Getting sigmas and rho out
+    a.sig2 = Sig[1,1]
+    b.sig2 = Sig[2,2]
+      
+    rho = (Sig[1,2]/sqrt(a.sig2*b.sig2))
+  
+  # Gamma
+  for (i in 1:I){
+    for(l in 1:L){
+      gamma[i,l] ~ dnorm(nu,invdelta)
+    }
+  }
+  
+  #Hyperpriors for Morph effects
+    nu ~ dnorm(0,1)
+    invdelta ~ dgamma(.5,.01)
+    delta <- 1/invdelta
+}
+
+
+##############
+# JAGS SAMPLING CHAIN
+##############
+samples = jags(data, parameters.to.save = param, model.file=CAjags, n.chains=1, n.iter=M, n.burnin=1)
+```
+
+To assess the correlation among individual assimilation and contrast effects, we developed a Bayesian hierarchical mixed model with a probit link.  The benefits of the modeling approach are two-fold:  First, it provides a principled means of combining data across the different targets.  Second, and more importantly, the hierarchical structure provides a form of regularization used to avoid overstating the range of individual variation [@Efron:Morris:1977;@Lehmann:Casella:1998;@Davis:etal:2017].  The model and corresponding analysis are described in an online supplement at https://github.com/PerceptionAndCognitionLab/ctx-flanker/tree/public/papers/current.  The main outputs are individual estimates of assimilation and contrast effects and a posterior distribution of the correlation.  The individual estimates are shown in the scatter plot in Figure \@ref(fig:modelfiguresminus)A; more positive values indicate a stronger assimilation and stronger contrast effects in the respective background contexts.
+
+```{r modelfiguresminus, fig.width = 7, fig.height = 4, fig.cap = "Model Results.  **A.** Each participant's estimated assimilation effect against their estimated contrast effect.  An ellipse denotes the standard deviations of the estimate and the blue regression line is the line of best fit.  **B.** The posterior distribution of the population correlation, $\\rho$, between assimilation and contrast.  The solid line denotes the prior distribution.",cache=TRUE}
+#layout(matrix(c(1,1,1,4,4,4,1,1,1,4,4,4,1,1,1,4,4,4,2,2,2,3,3,3,2,2,2,3,3,3),nrow=5,byrow=T))
+#fig.width = 6, fig.height = 7.2
+par(mfrow=c(1,2))
+###########
+# Plot 1
+###########
+# par(pty='s')
+myColor=hsv((1:I)/I,1,.7,1)
+plot(post.mean.b,post.mean.a,col=myColor,pch=20,ylim=c(-.5,2.5),xlim=c(-.5,2.5), main= "A.", ylab = "Contrast Effect", xlab = "Assimilation Effect",frame.plot = F)
+myColor=hsv((1:I)/I,1,.7,.35)
+for (i in 1:I){
+  mat=matrix(c(post.var.b[i],post.cor*sqrt(post.var.b[i])*sqrt(post.var.a[i]),post.cor*sqrt(post.var.b[i])*sqrt(post.var.a[i]),post.var.a[i]),nrow=2)
+  lines(ellipse(mat,centre = c(post.mean.b[i],post.mean.a[i]),level=pnorm(1)-pnorm(-1)),col=myColor[i])
+}
+abline(0,1)
+abline(lm(post.mean.a~post.mean.b),col="slateblue",lwd=2)
+abline(v=0,col="gray",lty=3)
+abline(h=0,col="gray",lty=3)
+arrows(2,0,1.6,-.05,length=.075, angle=30,code=2,lwd=2)
+
+
+###########
+# Plot 2
+###########
+# Population Level
+ rho=samples$BUGSoutput$sims.list$rho
+ meanrho=mean(rho)
+ sdrho=sd(rho)
+ 
+ rho.hist=hist(rho,prob=T,col='lightblue',xlim=c(-1,1),breaks = seq(-1.025,1.025,.05),main = "B.", cex=1.3,xlab = "Population Correlation")
+ abline(h=.5)
+ abline(v=0,col="gray",lty=3)
+ 
+ rhofactor=.5/rho.hist$density[21]
+```
+
+```{r even, cache=TRUE, include=FALSE, message=FALSE, warning=FALSE}
+#############
+#DATA SETUP
+#############
+FullN = nrow(dat.morph)
+
+Even = seq(2,FullN,2)
+Odd = seq(1,FullN,2)
+
+dat.morphs.even = dat.morph[Even,]
+
+##############
+#IMPORTANT VALUES
+##############
+I = length(unique(dat.morphs.even$sub)) # number of participants
+J = length(unique(dat.morphs.even$frame))/2 # number of frame types
+K = length(unique(dat.morphs.even$frame))/2 #number of frame congruency
+L = length(unique(dat.morphs.even$pixels)) #number of morphs
+n = 60 #number of replications
+
+##############
+#DATA SETUP, DEFINITION:  ACCURACY RESPONSES
+##############
+Y=dat.morphs.even$response
+N=length(Y)
+
+sub=as.factor(dat.morphs.even$sub)
+levels(sub)=1:I
+sub = as.numeric(sub)
+stim=ifelse(dat.morphs.even$frame=="CAT"|dat.morphs.even$frame=="THE",1,2)
+frame=ifelse(dat.morphs.even$frame=="CAT"|dat.morphs.even$frame=="H",1,2)
+morph=dat.morphs.even$pixels-1
+
+##############
+#CHAIN SETUP (Things JAGS needs to worry about)
+##############
+#REPITIONS
+##############
+M=1000
+
+stimval=c(0,1)
+frameval=c(-(1/2),(1/2))
+
+theta=c("alpha","beta")
+nVar=length(theta)
+sigma=.05*diag(nVar)
+
+data=list("Y","I","J","K","L","N","sub","stim","frame","morph","stimval","frameval","nVar","sigma")
+
+# Initial Values JAGS figures out
+
+##############
+#PARAMETERS TO ESTIMATE
+##############
+param = c("mu","theta","rho","alpha","beta")
+
+##############
+# JAGS MODEL
+##############
+CAjags <- function() {
+  #Data level
+  for (n in 1:N){
+    Y[n] ~ dbern(phi(mu[sub[n],stim[n],frame[n],morph[n]]))
+  }
+  
+    
+  # Computing Mu
+  for(i in 1:I){
+    for (j in 1:J){
+      for (k in 1:K){
+        for (l in 1:L){
+          mu[i,j,k,l] <- gamma[i,l]+stimval[j]*frameval[k]*alpha[i]+(1-stimval[j])*frameval[k]*beta[i]
+        }
+      }
+    }
+  }
+    
+  #Priors for Alpha and Beta
+  # Theta=c(alpha,beta)
+  for (i in 1:I){
+    theta[i,1:nVar] ~ dmnorm(mutheta[1:nVar],invSig[1:nVar,1:nVar])
+    
+    alpha[i] = theta[i,1]
+    beta[i] = theta[i,2]
+  }
+  
+  #Hyperpriors for A and C effects
+    for(v in 1:nVar){
+      mutheta[v] ~ dnorm(0,1)
+    }
+    invSig ~ dwish(sigma,3)
+    Sig=inverse(invSig)
+    
+  #Getting sigmas and rho out
+    a.sig2 = Sig[1,1]
+    b.sig2 = Sig[2,2]
+      
+    rho = (Sig[1,2]/sqrt(a.sig2*b.sig2))
+  
+  # Gamma
+  for (i in 1:I){
+    for(l in 1:L){
+      gamma[i,l] ~ dnorm(nu,invdelta)
+    }
+  }
+  
+  #Hyperpriors for Morph effects
+    nu ~ dnorm(0,1)
+    invdelta ~ dgamma(.5,.01)
+    delta <- 1/invdelta
+}
+
+
+##############
+# JAGS SAMPLING CHAIN
+##############
+samples = jags(data, parameters.to.save = param, model.file=CAjags, n.chains=1, n.iter=M, n.burnin=1)
+
+##############
+# RESULTS
+##############
+alpha = samples$BUGSoutput$sims.list$alpha
+beta = samples$BUGSoutput$sims.list$beta
+
+post.alpha = apply(alpha,2,mean)
+post.beta = apply(beta,2,mean)
+
+even = cbind(post.alpha,post.beta)
+```
+
+```{r odd, cache=TRUE, include=FALSE, message=FALSE, warning=FALSE}
+##############
+#DATA SETUP
+##############
+dat.morphs.odd = dat.morph[Odd,]
+
+##############
+#IMPORTANT VALUES
+##############
+I = length(unique(dat.morphs.odd$sub)) # number of participants
+J = length(unique(dat.morphs.odd$frame))/2 # number of frame types
+K = length(unique(dat.morphs.odd$frame))/2 #number of frame congruency
+L = length(unique(dat.morphs.odd$pixels)) #number of morphs
+n = 60 #number of replications
+
+##############
+#DATA SETUP, DEFINITION:  ACCURACY RESPONSES
+##############
+Y=dat.morphs.odd$response
+N=length(Y)
+
+sub=as.factor(dat.morphs.odd$sub)
+levels(sub)=1:I
+sub = as.numeric(sub)
+stim=ifelse(dat.morphs.odd$frame=="CAT"|dat.morphs.odd$frame=="THE",1,2)
+frame=ifelse(dat.morphs.odd$frame=="CAT"|dat.morphs.odd$frame=="H",1,2)
+morph=dat.morphs.odd$pixels-1
+
+##############
+#CHAIN SETUP (Things JAGS needs to worry about)
+##############
+#REPITIONS
+##############
+M=1000
+
+stimval=c(0,1)
+frameval=c(-(1/2),(1/2))
+
+theta=c("alpha","beta")
+nVar=length(theta)
+sigma=.05*diag(nVar)
+
+data=list("Y","I","J","K","L","N","sub","stim","frame","morph","stimval","frameval","nVar","sigma")
+
+# Initial Values JAGS figures out
+
+##############
+#PARAMETERS TO ESTIMATE
+##############
+param = c("mu","theta","rho","alpha","beta")
+
+##############
+# JAGS MODEL
+##############
+CAjags <- function() {
+  #Data level
+  for (n in 1:N){
+    Y[n] ~ dbern(phi(mu[sub[n],stim[n],frame[n],morph[n]]))
+  }
+  
+    
+  # Computing Mu
+  for(i in 1:I){
+    for (j in 1:J){
+      for (k in 1:K){
+        for (l in 1:L){
+          mu[i,j,k,l] <- gamma[i,l]+stimval[j]*frameval[k]*alpha[i]+(1-stimval[j])*frameval[k]*beta[i]
+        }
+      }
+    }
+  }
+    
+  #Priors for Alpha and Beta
+  # Theta=c(alpha,beta)
+  for (i in 1:I){
+    theta[i,1:nVar] ~ dmnorm(mutheta[1:nVar],invSig[1:nVar,1:nVar])
+    
+    alpha[i] = theta[i,1]
+    beta[i] = theta[i,2]
+  }
+  
+  #Hyperpriors for A and C effects
+    for(v in 1:nVar){
+      mutheta[v] ~ dnorm(0,1)
+    }
+    invSig ~ dwish(sigma,3)
+    Sig=inverse(invSig)
+    
+  #Getting sigmas and rho out
+    a.sig2 = Sig[1,1]
+    b.sig2 = Sig[2,2]
+      
+    rho = (Sig[1,2]/sqrt(a.sig2*b.sig2))
+  
+  # Gamma
+  for (i in 1:I){
+    for(l in 1:L){
+      gamma[i,l] ~ dnorm(nu,invdelta)
+    }
+  }
+  
+  #Hyperpriors for Morph effects
+    nu ~ dnorm(0,1)
+    invdelta ~ dgamma(.5,.01)
+    delta <- 1/invdelta
+}
+
+
+##############
+# JAGS SAMPLING CHAIN
+##############
+samples = jags(data, parameters.to.save = param, model.file=CAjags, n.chains=1, n.iter=M, n.burnin=1)
+
+##############
+# RESULTS
+##############
+alpha = samples$BUGSoutput$sims.list$alpha
+beta = samples$BUGSoutput$sims.list$beta
+
+post.alpha = apply(alpha,2,mean)
+post.beta = apply(beta,2,mean)
+
+odd = cbind(post.alpha,post.beta)
+```
+
+```{r reliability, cache=TRUE, warning=FALSE}
+retest = cbind(even,odd)
+
+alphacor = cor(retest[1:I,1],retest[1:I,3])
+betacor = cor(retest[1:I,2],retest[1:I,4])
+
+adjust=function(rho){
+  (2*rho)/(1+rho)
+}
+
+adjalphacor = adjust(alphacor)
+adjbetacor = adjust(betacor)
+```
+
+As can be seen in Figure \@ref(fig:modelfiguresminus)A, there is a fair degree of variation across individuals as well as an overall positive relationship.  An issue, however, is the presence of an outlying point, indicated with an arrow. This participant had the highest degree of assimilation and the lowest degree of contrast.  Performance here stands apart from that of the other participants; if that point is included in analysis, then it would have great leverage.  We decided in a *post-hoc* manner to exclude this participant, and the following analyses are based on this exclusion.   Our results therefore pertain to the vast majority of individuals who are in the main cluster.
+
+Assimilation and contrast estimates show a positive relationship as seen by the OLS regression line in Figure \@ref(fig:modelfiguresminus)A.  OLS regression, however, is inappropriate as an inferential tool because the estimates are correlated through the hierarchical structure.  To perform inference, we plot the prior and posterior distributions of the population-level correlation coefficient.  The prior distribution here was chosen to be flat, placing equal plausibility on all values of the correlation coefficient.  The resulting posterior distribution is well localized for positive values away from zero.  The mean of this posterior distribution serves as a point estimate, and it is `r round(meanrho,digits=2)`.   One way of competitively assessing the null-correlation hypothesis vs. the alternative is to compute the change in plausibility at zero.  The plausibility was reduced by a factor of `r round(rhofactor,digits=2)`.  This reduction indicates the data are `r round(rhofactor,digits=2)` times more plausible under the alternative than the null.  This computation is the Savage-Dickey approach to Bayes factors [@Dickey:1971;@Gelfand:Smith:1990].  
+
+In this experiment, the effects of the surround is minimal for the first several trials and grows slowly to an asymptote. Both contrast and assimilation effects tend to reach their asymptotes after the second of ten blocks.  We reran the analysis eliminating the first 2 blocks (about 20\% of the data).  The Bayes factor was found to be smaller: 6-to-1 rather than the 25-to-1 with all data.  We think this lower value serves as a lower limit; perhaps the strength of evidence is best thought of as a range, say from 6-to-1 to 25-to-1 or roughly, one order of magnitude.  The supplement provides more information about this analysis.
+
+To place the correlation value in context, it is helpful to consider the reliability of individual estimates.  We suspected high reliability because we had each participant perform a total of 960 trials, which is quite numerous.  We split each individual's data into odd and even trials, and reran the Bayesian probit regression analysis separately for the odd and even trials.  Each analysis provides an estimate of each individual's assimilation and contrast, and the assimilation estimates in the odd trials may be correlated with the assimilation in the even trials, and the same for the contrast estimates.  The correlation among individuals' assimilation estimates was `r round(alphacor,digits=2)`; the correlation among individuals' contrast estimates was `r round(betacor,digits=2)`.  These values when extrapolated to the full sample imply reliabilities of `r round(adjalphacor,digits=2)` and `r round(adjbetacor,digits=2)`, respectively.  Hence, much of the variation in the scatter is not due to trial-by-trial noise, but reflect true latent variation across individuals.
+
+
+
+# Discussion
+
+Our goal here was to assess whether inhibition was mediated by common or distinct mechanisms in assimilation and contrast contexts.  To address this goal, we assessed the correlation between individuals' ability to inhibit background assimilative information and their ability to inhibit background contrastive information.  Our approach relied on morph-letter targets.  Large assimilation effects were found when the surrounding, to-be-ignored information could potentially be a word, replicating the often observed top-down effect of word contexts on letter identification.  Contrast effects were found when the surrounding contexts were letters, replicating @Rouder:King:2003 main finding.  The key finding here is a positive correlation across individuals.  Individuals who were better able to inhibit the contrastive effects of surrounding letter contexts were better able to inhibit the assimilative effects of surrounding word contexts.
+
+The findings are inline with the view that selective attention is achieved by narrowing receptive fields.  This narrowing process occurs whether the to-be-excluded information is contrastive or assimilative [e.g., @Cowan:1995;@Desimone:Duncan:1995;@Eriksen:Schultz:1979;@Hedden:Gabrieli:2010].   Yet, there are strong arguments that contrast and assimilation are not the same process.  Most theories of contrast rely on a center-surround organization of low-level, perceptual receptive field structures [@Palmer:1999]. Most theories of assimilation flanker effects, however, are failures of response inhibition, which is conceptualized as a higher-level, top down process [@Eriksen:Eriksen:1974]. @Rouder:King:2003 interpreted their original findings as evidence for distinct processes of contrast and assimilation. They theorized that the assimilative effect was at the response level and the contrastive effect was at a perceptual level.
+
+Our finding, the correlation between inhibition effects, could be interpreted as evidence for a unified mechanism of inhibition.  Here is how: attention acts fairly early but is imperfect and some irrelevant information is processed.  When it is, the ensuing contrast and assimilation effects result.  In this view, the common variation across these tasks index the individual's raw ability to control selective attention.  This explanation follows the parsimonious account from @Lachter:etal:2004, who provide an updated version of Broadbent's classic early-attention theory [@Broadbent:1958].  
+
+While this interpretation fits with the current finding, we caution readers when relying on correlations to explain structure and processing.  The correlation may not result from a leaky early filter, but might reflect more mundane explanations such as variability in demand characteristics.  Some participants are going to take more time, respond with more care, and simply try harder to exclude the background.  These participants will show smaller differences between *A* and *H* backgrounds, that is, smaller contrasts, and also smaller differences between *T_E* and *C_T* contexts, that is smaller assimilation.  So, as is often the case in individual-differences research, diagnosing the cause of correlations remains difficult.  The next step is to manipulate spatial attention within this paradigm and to explore the effects of those manipulations on the correlations across contrastive and assimilative tasks.
+
+<!-- Behavioral evidence for distinct processes comes from @Rouder:King:2003 whose design is a bit complicated.  These researchers associated the letters *c* and *A* with one response, denoted $R_1$, and *e* and *H* with another, denoted $R_2$.  When well-formed letters were the target, assimilation to the response assignment of the background was observed.  For well-formed *A* letters, backgrounds of *c* resulted in higher proportion of $R_1$ response than did backgrounds of *e*.  When morphed letters were targets, the effect varied.  If morphs between *A* and *H* were surrounded by either *A* or *H*, the effect was contrastive.  Yet, if these same morphs were surrounded by *c* or *e*, the effect was assimilative.  -->
+
+#### Author's Contributions
+H.K.S. helped conceive the project, programmed the experiment, performed the Bayesian data analysis, and contributed to the writing of the manuscript.  S. M. R. led data collection and provided initial analysis of the data.  J. M. H. contributed to the design and data analysis.  J. N. R. contributed to all aspects of the project except for data collection.  All authors take responsibility for the integrity of the data, analysis, and interpretation.
+
+\newpage
+
+# References
+```{r create_r-references}
+r_refs(file = "r-references.bib")
+```
+
+\setlength{\parindent}{-0.5in}
+\setlength{\leftskip}{0.5in}

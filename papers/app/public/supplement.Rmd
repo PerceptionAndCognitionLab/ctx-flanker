@@ -1,0 +1,399 @@
+---
+title             : "Supplement to 'Common or Distinct Attention Mechanisms for Contrast and Assimilation?'"
+shorttitle        : "Contrast and Assimilation Supplement"
+
+author: 
+  - name          : "Hope K. Snyder"
+    affiliation   : "1"
+    corresponding : yes 
+    address       : "205 McAlester Hall, University of Missouri, Columbia, MO 65211"
+    email         : "hks7w2@mail.missouri.edu"
+  - name: "Sean M. Rafferty"
+    affiliation: '1'
+  - name: "Julia M. Haaf"
+    affiliation: '1'
+  - name: "Jeffery N. Rouder"
+    affiliation: '2,1'
+    
+affiliation:
+  - id: '1'
+    institution: University of Missouri
+  - id: '2'
+    institution: University of California, Irvine
+    
+author_note: >
+  This document was written in R-Markdown with code for data analysis integrated into the text.  The Markdown script is open and freely available at https://github.com/PerceptionAndCognitionLab/ctx-flanker/tree/public/papers/current.  The data were *born open* [@Rouder:2016] and are freely available at https://github.com/PerceptionCognitionLab/data1/tree/master/ctxIndDif/flankerMorph4
+
+keywords: "Inhibition, Selective Attention, Contrast Effects, Assimilation Effects"
+wordcount: ' '
+
+bibliography: ["r-references.bib","lab.bib"]
+
+figsintext        : yes
+figurelist        : no
+tablelist         : no
+footnotelist      : no
+lineno            : no
+
+lang              : "english"
+class             : "man"
+header-includes:
+   - \usepackage{enumerate}
+   - \usepackage{amsmath, amssymb,amsthm,amsfonts}
+   - \usepackage{multicol}
+   - \usepackage[usenames,dvipsnames]{pstricks}
+   - \usepackage{mathtools}
+output            : papaja::apa6_pdf
+csl               : apa6.csl
+---
+
+```{r include = FALSE}
+#############
+#LIBRARIES
+#############
+library("RCurl")
+library("msm")
+library("MASS")
+library("rvest")
+library("MCMCpack")
+library("mvtnorm")
+library("papaja")
+library("graphics")
+library("ellipse")
+library("graphics")
+library("mvnfast")
+library("R2jags")
+library("dplyr")
+```
+
+This document is the supplement to "Common or Distinct Attention Mechanisms for Contrast and Assimilation?".   It provides the specification and analysis of a hierarchical Bayesian probit model for assessing the correlation across individuals' abilities to inhibit distractors in assimilation and contrast contexts.  Finally, it provides a short analysis of the inhibition effects over time.
+
+# Model Specification
+
+Let $Y=0,1$ denote whether a response is "A" or "H", respectively.  Further, let $Y_{ijk\ell m}$ denote the response for the  $i$th participant, $i=1,\ldots,I$, in the $j$th context type ($j=1,2$ for word and letter contexts, respectively), for the $k$th context direction ($k=1,2$, for contexts that promote "A"  and "H" responses, respectively), for the  $\ell$th target, $\ell=1,\ldots,L$, and for the $m$th replicate, $m=1,\ldots ,M_{ijk\ell}$.  The context assignments are displayed in the following table:
+
+```{r table,echo = FALSE,cache=TRUE}
+library(pander)
+quest6 <- matrix(c(NA,"A-promoting","H-promoting", "word","C_T","T_E","letter","H","A"),ncol=3,byrow=TRUE)
+colnames(quest6) <- c(" ","k=1","k=2")
+rownames(quest6) <- c(" ","j=1","j=2")
+quest6 <- as.table(quest6)
+
+panderOptions("missing", " ")
+pander(quest6)
+```
+
+Observations $Y_{ijk\ell m}$ are dichotomous.  To model the effect of covariates in dichotomous observations, we use a probit-regression specification:
+\[Y_{ijk\ell m} \stackrel{ind}{\sim} \text{Bernoulli}\left[\Phi(\mu_{ijk\ell})\right].\]
+
+Here, $\Phi$, the cumulative distribution function of the standard normal, is the link, and $\mu_{ijk\ell} \in (\infty,\infty)$ is the combined effect of people, conditions, and the target. 
+
+To model individual inhibition effects, we additively decompose $\mu_{ijk\ell}$ into the effect of the target for a particular participant, $\gamma_{i\ell}$, the individual's *assimilation* effect when the background context is a word, $\alpha_i$ and the individual's *contrast* effect when the background context is a letter frame, $\beta_i$.  The decomposition is:
+\[\mu_{ijk\ell}=\gamma_{i\ell}+v_jx_k\alpha_i+(1-v_j)x_k\beta_i.\]
+
+
+The quantities $v_j$ and $x_k$ are indicators of the context type and direction, as follows:
+\[ v_j=
+  \begin{dcases}
+      0 & \quad \text{if} \quad j =2  \text{ (letters)}\\
+      1 & \quad \text{if} \quad j =1 \text{ (word)}
+  \end{dcases}
+  \qquad
+  x_k=
+  \begin{dcases}
+      \frac{-1}{2} & \quad \text{if} \quad k =1  \text{ (A-promoting)}\\
+      \frac{1}{2}  & \quad \text{if} \quad k =2 \text{ (H-promoting)}
+  \end{dcases}
+\]
+
+Prior distributions are needed for $\alpha_i, \beta_i, \text{ and } \gamma_{i\ell}$.  We start with $\gamma_{i\ell}$, the effect of the target for a particular participant.  These parameters are not of primary concern, and we use a broad hierarchical prior given by: $\gamma_{i\ell} \sim \mbox{N}(\nu_\ell,\delta_\ell)$ with hyper priors of $\nu_{\ell} \sim \mbox{N}(0,1)$ and $\delta_{\ell} \sim \mbox{Inverse Gamma}(.5,.01)$.  
+The effects of interest are an individual's assimilation effect, $\alpha_i$, and an individual's contrast effect, $\beta_i$.  We follow the development in @Rouder:etal:2007a who describe Bayesian analyses in these settings.  The joint prior over these parameters is
+\[\begin{pmatrix}
+  \alpha_i\\
+  \beta_i
+\end{pmatrix} = \mbox{N}(\boldsymbol{\lambda},\boldsymbol{\Sigma}),\] 
+where $\boldsymbol{\lambda}$ is the vector $(\mu_{\alpha},\mu_{\beta})$ and $\boldsymbol{\Sigma}=\begin{pmatrix} \Sigma_{1,1} & \Sigma_{1,2} \\ \Sigma_{2,1} &  \Sigma_{2,2} \end{pmatrix}$ is a covariance matrix.
+
+Following @Rouder:etal:2007a, the hyperpriors for $\mu_{\alpha}$ and $\mu_{\beta}$ are given by
+\[\mu_{\alpha} \sim N(0,1),\]
+\[ \mu_{\beta} \sim N(0,1). \]
+The hyperprior for $\boldsymbol{\Sigma}$ is
+\[\boldsymbol{\Sigma} \sim \mbox{Inverse Wishert}(3,\Omega),\]
+where $\Omega = \begin{vmatrix}.05 & 0 \\ 0 & .05 \end{vmatrix}$.
+A key property of the above specification is that population covariance in $\boldsymbol{\Sigma}$ is an explicit parameter given by $\Sigma_{1,2}=\rho\sigma_a\sigma_b$.  Hence, a population correlation, $\rho$ is well defined, and subsequent inferences generalize to new data from new participants.
+
+The choices we make above are all reasonable given the expected degree of variability in proportions.  The standard normal prior in the probit space on $\mu_{\beta}$ and $\mu_{\alpha}$ corresponds to flat priors in the space of proportions, and the shape value of $3$ in the Inverse Wishert corresponds to a flat prior on the population-level correlation coefficient.  The only substantive choice is the scalar value of $.05$ of the Inverse Wishert.  This small value of precision corresponds to a vaguely informative prior on effects.  Additional details are provided in @Rouder:etal:2007a.
+
+# Analyses Methods
+
+The estimation of probit-transformed parameters follows from @Albert:Chib:1995.  Accordingly, a new set of latent variables is introduced for each observation, and we denote them $w_{ijk\ell m}$.  These variables are defined as follows:
+\[y_{ijk\ell m}=
+  \begin{dcases}
+      0 & \text{ then }  w_{ijk\ell m} < 0 \\ 
+      1  & \text{ then }  w_{ijk\ell m} \geq 0
+  \end{dcases}
+\]
+
+Without loss of generality, the variable $w_{ijk\ell m}$ is assumed to be distributed as a normal with a variance of one and the mean of $\mu_{ijk\ell}$.  Thus, the parameters of interest at this level are $w_{ijk\ell m}$ and $\mu_{ijk\ell}$.  It is easy to compute the posterior of $\boldsymbol{w}$ given the vector of $\boldsymbol{\mu}$ and, conversely, it is easy to compute the posterior of $\boldsymbol{\mu}$ given the $\boldsymbol{w}$'s.  Hence, the marginals of each may be found by Markov chain Monte Carlo  (MCMC) sampling.   The conditional posterior distribution of $\boldsymbol{w}$ is a truncated normal:
+\[w_{ijk\ell m}|y_{ijk\ell m} \sim 
+  \begin{dcases} 
+    \text{N}_-(\mu_{ijk\ell},1) & \text{ if }  y_{ijk\ell m}=0 \\
+    \text{N}_+(\mu_{ijk\ell},1) & \text{ if }  y_{ijk\ell m}=1, 
+  \end{dcases}
+\]
+where $N_+$ and $N_-$ denote normal distributions truncated at zero from below and above, respectively.
+
+Posterior distributions for remaining parameters may also be sampled with MCMC.  In all cases, conditional posterior distributions of parameters may be derived directly from the proportional form of Bayes rule [@Jackman:2009;@Rouder:Lu:2005].  Priors were chosen to be conjugate, and consequently, posterior distributions may be sampled from known distributions in Gibbs steps. 
+
+Critical parameters are individual estimates of contrast and assimilation, and the population-level correlation of these abilities.  Individual estimates are parameters $\alpha_i$ and $\beta_i$.  Posterior means and posterior standard deviations of these parameters are shown as points and ellipses, respectively, in Figure 4A in the main paper.  The most critical parameter is the population correlation.  On each iteration of the MCMC chain, we calculated $\rho=\Sigma_{1,2}/\sqrt{\Sigma_{1,1}\times \Sigma_{2,2}}$.  The prior and posterior distribution of $\rho$ is shown in Figure 4B.  A full description of the results may be found in the main paper.
+
+# Inhibition Effects Over Time
+
+```{r start,echo = FALSE,cache=TRUE}
+#############
+#Data Retrieval Function
+#############
+read_github_dat <- function(url, extension, read_fun, which_extension) {
+  #Load required packages
+  if(!require("rvest")) stop("Please install the 'rvest' package.")
+  if(!require("RCurl")) stop("Please install the 'RCurl' package.")
+  if(!require("stringr")) stop("Please install the 'stringr' package.")
+  # Fetch file names
+  github_page <- read_html(url)
+  file_nodes <- html_nodes(github_page
+                           , ".content .css-truncate-target .js-navigation-open")
+  file_names <- html_text(file_nodes)
+  file_url <- html_attr(file_nodes, "href")[grep(extension, file_names)]
+  which_files <- html_attr(file_nodes, "href")[grep(which_extension, file_names)]
+  which_files <- as.numeric(str_sub(which_files, -3, -1))
+  file_url <- paste0("https://raw.githubusercontent.com", file_url)
+  file_url <- gsub("blob/", "", file_url)
+  data <- lapply(file_url[which_files], read_fun, fill = T)
+  data <- do.call("rbind", data)
+  data
+}
+
+ # Testing out A & C effects over time
+ # Middle morph only
+ #############
+ 
+ ##############
+ #DATA SETUP
+ ##############
+ dat <- read_github_dat(url = "https://github.com/PerceptionCognitionLab/data1/tree/master/ctxIndDif/flankerMorph4"
+                        , extension = ".dat."
+                        , read_fun = read.table
+                        , which_extension = ".ses.")
+ #Add Variable Names
+ header <- c("sub", "trial", "block", "trialpblock", "file", "frame", "pixels", "response", "choice", "rt", "toofast", "toofastN")
+ colnames(dat) <- header
+
+ #############
+ #DATA RESTRICT
+ #############
+ #Participants 45 and 73 had some data collection hickups and have to be excluded
+ sub.ex <- c(43, 73)
+ # Participant 75 was seen to be an outlier in performance, post-hoc exclusion
+ # sub.ex <- c(43, 73, 75)
+ dat.clean <- subset(dat, rt < 2 & toofast == 0 & !(sub %in% sub.ex))
+
+ # Only want pixels = 3
+ dat.morph <- subset(dat, rt < 2 & toofast == 0 & pixels == 3 & !(sub %in% sub.ex))
+```
+
+It may be of interest to see how assimilation and contrast effects develop over time.  A short examination of time effects was conducted.  First, the data for the start of each experimental block was investigated. Participants appeared acclimated to the task within the first ten to twenty trials of each block.  Often, these trials were removed during cleaning procedures.  Second, it was asked whether the inhibition effects changed over blocks.
+
+Figure \@ref(fig:blocktest) shows the average effect of the letter-context and word-context conditions across the ten blocks of the experiment.  To observe the average effect in the letter-context condition, we subtracted the proportion of "H" responses for the *A*-letter context from that for the *H*-letter context, averaged over all participants.  Similarly, the effect in the word-context condition, averaged over all participants, was formed by subtracting the proportion of H responses in the *C_T*-word context from that in the *T_E*-word context.  In this graph, positive values indicate an assimilation effect; zero indicates no effect of context direction; negative values indicate a contrast effect.  From the figure, an "acquisition period" can be observed.  In the first and second block, participants became familiar with the experimental procedure and what was expected of them.  As the participants seemed to learn about their task quickly, these blocks were included in the analysis presented in the main paper.
+
+```{r blocktest, fig.width = 6, fig.height = 5,fig.cap="Average effects for assimlation and contrast for the middle morph across blocks.  The negative driection denotes a robust contrast effect while the positive direction denotes a robust assimilation effect.",cache=TRUE}
+#############
+# Participant Effects
+#############
+dat.morph = dat.morph %>%
+   group_by (sub,block) %>%
+   # group_by (frame) %>%
+   summarize (assim = mean(response[frame=="THE"],na.rm=TRUE)-mean(response[frame=="CAT"],na.rm=TRUE),cont = mean(response[frame=="H"],na.rm=TRUE)-mean(response[frame=="A"],na.rm=TRUE))
+
+
+ dat.morph$sub = as.factor(dat.morph$sub)
+ I=length(levels(dat.morph$sub))
+ levels(dat.morph$sub)=1:I
+
+#############
+# Average Effects
+#############
+dat.morph.avg = dat.morph %>%
+   group_by(block) %>%
+   summarize (assim = mean(assim,na.rm=TRUE),cont = mean(cont,na.rm=TRUE))
+ # 4, 40, 86 have NANs because of the rt and tooFast rule
+
+
+ ##############
+ #PLOTTING
+ ##############
+# Assimilation
+ ##############
+ # par(mfrow=c(1,2))
+ plot(dat.morph.avg$assim, type = 'l', col = "darkred", pch = 20, lwd = 3, main= "Average Effects over Blocks", ylab = "Difference", xlab = "Block",ylim = c(-.5,.5),axes=F)
+ points(dat.morph.avg$assim, col = "darkred", pch=19)
+ ##############
+ # Contrast
+##############
+ lines(dat.morph.avg$cont, col = "darkblue" , lwd = 3)
+ points(dat.morph.avg$cont, col = "darkblue", pch=19)
+ 
+ abline(h=0,col="gray",lty=3)
+ x=as.vector(round(seq(-.4,.4,.1),digits=1))
+ par(las=1)
+ axis(2,at=seq(-.5,.5,.1),labels=c("Favors A",x,"Favors H"))
+ par(las=0)
+ axis(1,at=1:10,label=1:10)
+
+# for(i in 1:I){
+#   lines(dat.morph$assim[sub=(i-1)*10+(1:10)], col=hsv(.6,1,1,.2))
+# }
+ 
+legend(1,.5,legend=c("Word Context","Letter Context"), lty=c(1,1),lwd=c(3,3),pch=c(20,20),col=c("darkred","darkblue"),bg="ghostwhite")
+
+##############
+ # Contrast
+##############
+ # plot(dat.morph.avg$cont, type = 'l', col = "darkred", pch = 20, lwd = 3, main= "Average Effects over Blocks", ylab = "Difference", xlab = "Block",ylim = c(-.5,.5),axes=F)
+ # points(dat.morph.avg$cont, col = "darkred", pch=19)
+ # abline(h=0,col="gray",lty=3)
+ # x=as.vector(round(seq(-.4,.4,.1),digits=1))
+ # par(las=1)
+ # axis(2,at=seq(-.5,.5,.1),labels=c("Favors A",x,"Favors H"))
+ # par(las=0)
+ # axis(1,at=1:10,label=1:10)
+# for(i in 1:I){
+#   lines(dat.morph$cont[sub=(i-1)*10+(1:10)], col=hsv(.6,1,1,.2))
+# }
+ 
+```
+
+```{r rerun, cache=TRUE, include=FALSE, message=FALSE, warning=FALSE}
+##############
+#DATA SETUP
+##############
+header <- c("sub", "trial", "block", "trialpblock", "file", "frame", "pixels", "response", "choice", "rt", "toofast", "toofastN")
+colnames(dat) <- header
+
+# Participants 45 and 73 had some data collection hickups and have to be excluded
+# Participant 75 was an outlier contrasting more than assimilating; opposite of all others in experiment
+sub.ex <- c(43, 73, 75)
+dat.clean <- subset(dat, rt < 2 & toofast == 0 & pixels != 1 & pixels != 5 & !(sub %in% sub.ex) & block != 1 & block != 2)
+
+######
+# Other Setup
+######
+Y=dat.clean$response
+N=length(Y)
+
+I = length(unique(dat.clean$sub)) # number of participants 
+J = length(unique(dat.clean$frame))/2 # number of frame types
+K = length(unique(dat.clean$frame))/2 #number of frame congruency
+L = length(unique(dat.clean$pixels)) #number of morphs
+n = 60 #number of replications
+
+sub=as.factor(dat.clean$sub)
+levels(sub)=1:I
+sub = as.numeric(sub)
+stim=ifelse(dat.clean$frame=="CAT"|dat.clean$frame=="THE",1,2)
+frame=ifelse(dat.clean$frame=="CAT"|dat.clean$frame=="H",1,2)
+morph=dat.clean$pixels-1
+
+##############
+## JAGS code
+##############
+# Things JAGS needs to worry about
+####
+M=1000
+
+stimval=c(0,1)
+frameval=c(-(1/2),(1/2))
+
+theta=c("alpha","beta")
+nVar=length(theta)
+sigma=.05*diag(nVar)
+
+data=list("Y","I","J","K","L","N","sub","stim","frame","morph","stimval","frameval","nVar","sigma")
+
+# Initial Values jags figures out
+
+# Parameters
+param = c("mu","theta","rho","alpha","beta")
+
+# JAGS(R2jags)
+#####
+samples = jags(data, parameters.to.save = param, model.file="CAjags.txt", n.chains=1, n.iter=M, n.burnin=1)
+```
+
+```{r rerunfig, fig.width = 7, fig.height = 4,fig.cap="Model Results, excluding the first two blocks.  **A.** Each participant's estimated assimilation effect against their estimated contrast effect.  An ellipse denotes the standard deviations of the estimate and the blue regression line is the line of best fit.  **B.** The posterior distribution of the population correlation, $\\rho$, between assimilation and contrast.  The solid line denotes the prior distribution.", cache=TRUE}
+
+par(mfrow=c(1,2))
+###########
+# Plot 1
+###########
+alpha = samples$BUGSoutput$sims.list$alpha
+beta = samples$BUGSoutput$sims.list$beta
+
+post.mean.a = apply(alpha,2,mean)
+post.var.a = apply(alpha,2,var)
+post.mean.b = apply(beta,2,mean)
+post.var.b = apply(beta,2,var)
+
+post.cor=cor(post.mean.a,post.mean.b)
+
+
+myColor=hsv((1:I)/I,1,.7,1)
+plot(post.mean.b,post.mean.a,col=myColor,pch=20,ylim=c(-.5,2.5),xlim=c(-.5,2.5), main= "A.", ylab = "Contrast Effect", xlab = "Assimilation Effect",frame.plot = F)
+myColor=hsv((1:I)/I,1,.7,.35)
+for (i in 1:I){
+  mat=matrix(c(post.var.b[i],post.cor*sqrt(post.var.b[i])*sqrt(post.var.a[i]),post.cor*sqrt(post.var.b[i])*sqrt(post.var.a[i]),post.var.a[i]),nrow=2)
+  lines(ellipse(mat,centre = c(post.mean.b[i],post.mean.a[i]),level=pnorm(1)-pnorm(-1)),col=myColor[i])
+}
+abline(0,1)
+abline(lm(post.mean.a~post.mean.b),col="slateblue",lwd=2)
+abline(v=0,col="gray",lty=3)
+abline(h=0,col="gray",lty=3)
+# arrows(2,0,1.6,-.05,length=.075, angle=30,code=2,lwd=2)
+
+
+###########
+# Plot 2
+###########
+# From R2jags
+# Population Level
+rho=samples$BUGSoutput$sims.list$rho
+rho.hist=hist(rho,prob=T,col='lightblue',xlim=c(-1,1),breaks = seq(-1.025,1.025,.05),main = "B.", cex=1.3,xlab = "Population Correlation")
+abline(h=.5)
+abline(v=0,col="gray",lty=3)
+
+meanrho=mean(rho)
+nullrhofactor=.5/rho.hist$density[21]
+rhofactor=rho.hist$density[28]/.5
+
+# Attempts (No Block 1/2)
+##########
+# 1) .31; 3.56
+# 2) .31; Inf
+# 3) .31; 4.995
+# 4) .32; 4.1625
+# 5) .32; 4.1325
+# 6) .30; 12.4875
+```
+
+However, to satisfy our curiosity, it was decided to redo our analysis with the first two blocks excluded.  The analysis method matched what was presented in the main paper and described here.  Critical parameters remained individual estimates of contrast and assimilation, and the population-level correlation of these abilities. The parameter that holds the most interest is the population correlation.  On each iteration of the MCMC chain, we again calculated $\rho=\Sigma_{1,2}/\sqrt{\Sigma_{1,1}\times \Sigma_{2,2}}$.  
+
+Figure \@ref(fig:rerunfig)A shows the assimilation and contrast effects for each participant.  As before, there is a fair degree of variation across individuals as well as an overall positive relationship.  To perform inference, we plot the prior and posterior distributions of the population-level correlation coefficient in Figure \@ref(fig:rerunfig)B.  The prior distribution here was chosen to be flat, placing equal plausibility on all values of the correlation coefficient.  The resulting posterior distribution remained localized for positive values away from zero.  The mean of this posterior distribution is `r round(meanrho,digits=2)`, which serves as a point estimate.  The plausibility of a null correlation was assessed by a Savage-Dickey approach to Bayes factors [@Dickey:1971;@Gelfand:Smith:1990].  The plausibility was reduced by a factor of `r round(rhofactor,digits=2)`.  This indicates the data are `r round(rhofactor,digits=2)` times more plausible under the alternative than the null.
+
+\newpage
+
+# References
+```{r create_r-references}
+r_refs(file = "r-references.bib")
+```
+
+\setlength{\parindent}{-0.5in}
+\setlength{\leftskip}{0.5in}

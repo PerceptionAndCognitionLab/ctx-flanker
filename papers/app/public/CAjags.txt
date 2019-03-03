@@ -1,0 +1,68 @@
+# Independent Abilities Model 4
+model{
+
+  #Data level
+  for (n in 1:N){
+    Y[n] ~ dbern(phi(mu[sub[n],stim[n],frame[n],morph[n]]))
+  }
+  
+    
+  # Computing Mu
+  for(i in 1:I){
+    for (j in 1:J){
+      for (k in 1:K){
+        for (l in 1:L){
+          mu[i,j,k,l] <- gamma[i,l]+stimval[j]*frameval[k]*alpha[i]+(1-stimval[j])*frameval[k]*beta[i]
+        }
+      }
+    }
+  }
+    
+  #Priors for Alpha and Beta
+  # Theta=c(alpha,beta)
+  for (i in 1:I){
+    theta[i,1:nVar] ~ dmnorm(mutheta[1:nVar],invSig[1:nVar,1:nVar])
+    
+    alpha[i] = theta[i,1]
+    beta[i] = theta[i,2]
+  }
+  
+  #Hyperpriors for A and C effects
+    for(v in 1:nVar){
+      mutheta[v] ~ dnorm(0,1)
+    }
+    invSig ~ dwish(sigma,3)
+    Sig=inverse(invSig)
+    
+  #Getting sigmas and rho out
+    a.sig2 = Sig[1,1]
+    b.sig2 = Sig[2,2]
+      
+    rho = (Sig[1,2]/sqrt(a.sig2*b.sig2))
+  
+  # Gamma
+  for (i in 1:I){
+    for(l in 1:L){
+      gamma[i,l] ~ dnorm(nu,invdelta)
+    }
+  }
+  
+  #Hyperpriors for Morph effects
+    nu ~ dnorm(0,1)
+    invdelta ~ dgamma(.5,.01)
+    delta <- 1/invdelta
+    
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
